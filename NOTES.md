@@ -259,7 +259,9 @@ nil. Alternative not done: resend only on receiving `READY`.
   - 5V → resistor → LED → collector; emitter → GND; D10 → 1 kΩ → base;
     10 kΩ base → GND (off during reset).
   - **Each LED with its own resistor:** 150 Ω for white/blue, 220 Ω for
-    red/amber/yellow (~13–15 mA each).
+    red/amber/yellow (~13–15 mA each). **For now all 150 Ω** (2026-10-06):
+    orange then runs at ~19 mA, within rating. If the needle is too bright
+    against the scale, swap only its resistors for 220/270 Ω.
   - Handles 15–20 LEDs. More LEDs = more identical branches in parallel.
   - For the scale, consider a **5 V COB strip** (continuous light, no dots;
     already has resistors; connects to the transistor as if it were an LED).
