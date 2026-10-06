@@ -236,7 +236,23 @@ nil. Alternative not done: resend only on receiving `READY`.
   lack of current. Fix: 100 µF + 100 nF between 5V and GND next to the LCD
   (and next to the motor driver), LCD ground on its own wire to the Nano.
 
-### Lighting (single-colour LEDs)
+### Lighting
+- **Colours (decided 2026-10-06):** scale numbers in **cool white** (like car
+  instrument clusters); needle in **orange**, matching the LCD backlight.
+- **LEDs salvaged from old speedometers** instead of bought: low SMD LEDs
+  with two side terminals (probably PLCC-2 / 3528). The body is white
+  whatever the light colour, so test each one before using it: multimeter
+  in diode mode, or 5 V through 1 kΩ. Desolder with hot air or two irons;
+  don't overheat them.
+  - Take the scale's white LEDs from the same cluster, so the shade of white
+    matches.
+  - Orange for the needle: compare against the LCD with all of them lit and
+    pick the closest by eye. Car clusters usually light the needle from the
+    hub, so the needle LEDs of an old cluster are a good start.
+  - The salvaged boards' resistors are sized for 12 V: don't reuse them,
+    each LED gets its own 150/220 Ω (below).
+- **The dial must be backlit:** numbers and marks translucent on an opaque
+  background (dark ink on film or translucent paper), not black on white.
 - **Lighting group** (LCD, acrylic needle LEDs next to the shaft, scale LEDs
   or strip): all on one **BC337** transistor driven by D10, so the script's
   brightness and off apply to everything.
@@ -255,7 +271,8 @@ nil. Alternative not done: resend only on receiving `READY`.
       brightness below max (PWM reduces consumption) or a separate 5 V supply.
     - The BC337 handles 800 mA: enough for the strip plus the LEDs.
 - **Warning lights:** one LED per pin (D5/D6) with 330 Ω, no transistor.
-- LED: long leg = + (anode); flat side/short leg = − (cathode).
+- LED: long leg = + (anode); flat side/short leg = − (cathode). On SMD LEDs
+  the cut corner usually marks the cathode; confirm in diode mode.
 - WS2812/SK6812 (addressable LEDs, one pin for all) were left out: no RGB
   wanted.
 
@@ -281,13 +298,14 @@ short, a separate 5 V supply for lighting and motor, with a common ground.
 - Assorted **resistor kit** (including 150, 220, 330 Ω, 1 kΩ and 10 kΩ)
 - Capacitors: 3 × **100 µF** electrolytic (≥10 V), 4 × **100 nF**
   ceramic
-- 3 or 5 mm **LEDs** in the chosen colour, 15–20 (to experiment)
-- 2 LEDs for the warnings (e.g. red/amber)
+- LEDs: none to buy; salvaged from old speedometers (cool white for the
+  scale, orange for the needle, 2 other colours for the warnings)
 - Perfboard (or a screw-terminal "expansion board" for the Nano), female
   pin headers so the Nano is removable, solid-core wire, heat-shrink tubing
 
 **Optional / later**
-- 1 m of **5 V COB** strip in the chosen colour (scale)
+- 1 m of **5 V COB** strip in cool white (scale), if the salvaged LEDs
+  leave dots
 - 1 **passive piezo** (Pomodoro)
 - 1 push button (Pomodoro)
 - Breadboard and jumper wires, if not at hand, to test the lighting
