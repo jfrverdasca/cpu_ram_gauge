@@ -14,7 +14,7 @@
 // minute with no data the LCD and its backlight turn off; a short press then only
 // wakes it for 10 s instead of toggling CPU/RAM.
 //
-// Bench-measured motor parameters (see NOTAS.md): half-step, 290 steps stop to stop,
+// Bench-measured motor parameters (see NOTES.md): half-step, 290 steps stop to stop,
 // 2 ms/step is reliable going up, the downward direction needs more margin.
 
 #include <EEPROM.h>
