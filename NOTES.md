@@ -106,9 +106,8 @@ RAM usage, driven by an Arduino over serial.
   place, even after pulling the plug.
 
 ## Code
-- `firmware/step_counter/`: bench sketch (commands over serial).
-- `firmware/gauge/`: final sketch. Pre-LCD version in
-  `firmware/gauge_backup/`.
+- `firmware/step_counter/`: bench sketch (commands over serial, 19200 baud).
+- `firmware/gauge/`: final sketch.
 - `pc/gauge.py`: PC script (`pip install -r pc/requirements.txt`).
   Runs on macOS and Linux; also starts on Windows (without screen detection).
 - Compiling without the IDE: `arduino-cli` ships inside Arduino IDE.app;

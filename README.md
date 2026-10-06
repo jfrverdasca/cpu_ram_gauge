@@ -36,7 +36,7 @@ The full pin map, wiring, current budget and shopping list are in
 | Path | Contents |
 |---|---|
 | `firmware/gauge/` | Final Arduino sketch |
-| `firmware/step_counter/` | Bench sketch to drive the motor from the Serial Monitor and calibrate it |
+| `firmware/step_counter/` | Bench sketch to drive the motor from the Serial Monitor (19200 baud) and calibrate it |
 | `pc/gauge.py` | PC script that sends the readings and LCD text |
 | `NOTES.md` | Design notes, bench results, serial protocol, electronics and to-do list |
 

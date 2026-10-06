@@ -4,7 +4,7 @@
 // Direct drive from the Arduino pins is for bench tests only (~37 mA per coil,
 // 40 mA absolute pin limit). Coils are released at the end of every move.
 //
-// Serial Monitor at 115200 baud, line ending "Newline". Type '?' for help.
+// Serial Monitor at 19200 baud, line ending "Newline". Type '?' for help.
 
 const uint8_t COIL_A1 = 2;
 const uint8_t COIL_A2 = 3;
