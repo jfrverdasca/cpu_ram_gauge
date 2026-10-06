@@ -292,41 +292,65 @@ loses torque: repeat the self-test with the lighting at maximum. If it falls
 short, a separate 5 V supply for lighting and motor, with a common ground.
 
 ## Bill of materials
-**Already at hand**
-| Item | Qty | Notes |
-|---|---|---|
-| VDO/Siemens 91 255 008 motor | 1 | |
-| Arduino Nano V3 (ATmega328P) | 1 | Mini-USB cable |
-| 16×2 LCD JHD162A | 1 | backlight resistor on board |
-| Push button (CPU/RAM) | 1 | |
-| Contrast pot, 7 kΩ | 1 | from the breadboard; 10 kΩ multi-turn (3296W) is nicer |
-| LEDs: cool white (scale), orange (needle), 2 warning colours | ~10 + 2 | salvaged from old speedometers |
+Status: **have**, **buy**, **salvaged** (from old speedometers), **later**.
 
-**To buy**
+**Main parts**
+| Item | Qty | Status | Notes |
+|---|---|---|---|
+| VDO/Siemens 91 255 008 motor | 1 | have | |
+| Arduino Nano V3 (ATmega328P) | 1 | have | has its own reset button |
+| Mini-USB cable | 1 | have? | most Nano V3 clones are Mini-USB |
+| **TB6612FNG** module | 1 | buy | motor driver; PWMA, PWMB and STBY to 5V |
+| 16×2 LCD JHD162A | 1 | have | backlight resistor on board |
+| Push button (CPU/RAM, self-test, forced homing) | 1 | have | panel mount for the final version |
+| **10 kΩ multi-turn trimpot** (3296W) | 1 | buy | LCD contrast; the 7 kΩ from the breadboard also works |
+
+**Lighting**
+| Item | Qty | Status | Notes |
+|---|---|---|---|
+| Cool white SMD LEDs (scale) | ~8 | salvaged | |
+| Orange SMD LEDs (needle) | ~2 | salvaged | |
+| Warning LEDs, 2 colours (e.g. red/amber) | 2 | salvaged | |
+| **BC337** transistor | 2 | buy | 1 spare; or BC639 / PN2222A (check pinout) |
+
+**Resistors**
+| Value | Qty | For |
+|---|---|---|
+| 150 Ω | 15 | lighting LEDs, all colours for now |
+| 330 Ω | 2 | warning lights |
+| 1 kΩ | 2 | transistor base (1 spare) |
+| 10 kΩ | 2 | base to ground (1 spare) |
+
+Check the ones at home first.
+
+**Capacitors**
+| Item | Qty | For |
+|---|---|---|
+| 100 µF electrolytic, ≥10 V | 3 | next to the LCD, the motor driver and the Nano's 5V |
+| 100 nF ceramic ("104") | 4 | one beside each 100 µF + 1 spare |
+
+**Assembly**
 | Item | Qty | Notes |
 |---|---|---|
-| **TB6612FNG** module | 1 | motor driver; PWMA, PWMB and STBY to 5V |
-| **BC337** transistor | 2 | 1 spare; or BC639 / PN2222A (check pinout) |
-| Resistor 150 Ω | 15 | lighting LEDs, all colours for now |
-| Resistor 330 Ω | 2 | warning lights |
-| Resistor 1 kΩ | 2 | transistor base (1 spare) |
-| Resistor 10 kΩ | 2 | base to ground (1 spare) |
-| Capacitor 100 µF electrolytic, ≥10 V | 3 | LCD, motor driver, Nano 5V |
-| Capacitor 100 nF ceramic ("104") | 4 | next to each 100 µF + 1 spare |
 | Perfboard (or Nano screw-terminal board) | 1 | |
 | Female pin header strip | 2 × 15 | Nano removable |
-| Solid-core wire, heat-shrink tubing | — | |
+| Male pin header strip | 1 × 40 | LCD and TB6612FNG, if they come without |
+| Solid-core wire, a few colours | — | |
+| Heat-shrink tubing | — | |
+| 4-pin connector (JST/Dupont) | 1 | optional: motor detachable |
 
-Resistors: check the ones at home first.
+**Tools**
+Soldering iron and solder, hot air (or a second iron) to desolder the SMD
+LEDs, multimeter, flux, desoldering braid.
 
-**Optional / later**
-| Item | Qty | Notes |
+**Later**
+| Item | Qty | For |
 |---|---|---|
 | 5 V COB strip, cool white | 1 m | only if the salvaged LEDs leave dots on the scale |
 | Passive piezo | 1 | Pomodoro |
 | Push button | 1 | Pomodoro |
 | Transparency film for the printer | 1–2 sheets | backlit dial |
-| Breadboard and jumper wires | — | if not at hand, to test the lighting |
+| Breadboard and jumper wires | — | testing the lighting, if not at hand |
 
 ## To do
 1. ✅ Count the travel in steps: **290** (measured twice).
