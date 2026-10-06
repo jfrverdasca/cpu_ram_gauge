@@ -187,6 +187,9 @@ nil. Alternative not done: resend only on receiving `READY`.
 
 ## Final version electronics
 
+Full wiring diagram: [docs/wiring.svg](docs/wiring.svg)
+(regenerate with `python3 docs/wiring.py docs/wiring.svg`).
+
 ### Pin map (Nano)
 | Pin | Function |
 |---|---|

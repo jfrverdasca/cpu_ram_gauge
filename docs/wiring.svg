@@ -1,0 +1,405 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1010" viewBox="0 0 1440 1010" font-family="Helvetica, Arial, sans-serif">
+<rect width="1440" height="1010" fill="white"/>
+<text x="30" y="40" font-size="22" text-anchor="start" fill="#111827" font-weight="bold">CPU/RAM gauge: wiring (final version)</text>
+<text x="30" y="62" font-size="13" text-anchor="start" fill="#475569" font-weight="normal">Nano pins grouped by function, not in board order. Same label (5V, GND, V0) = same net.</text>
+<rect x="560" y="140" width="200" height="760" rx="6" fill="#f8fafc" stroke="#1f2937" stroke-width="2"/>
+<text x="660.0" y="160" font-size="15" text-anchor="middle" fill="#111827" font-weight="bold">Arduino Nano V3</text>
+<text x="660.0" y="177" font-size="12" text-anchor="middle" fill="#475569" font-weight="normal">ATmega328P</text>
+<line x1="620" y1="140" x2="620" y2="120" stroke="#c2410c" stroke-width="2"/>
+<text x="620" y="196" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">5V</text>
+<line x1="700" y1="140" x2="700" y2="120" stroke="#334155" stroke-width="2"/>
+<text x="700" y="196" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">GND</text>
+<line x1="620" y1="120" x2="620" y2="106" stroke="#c2410c" stroke-width="2"/>
+<line x1="610" y1="106" x2="630" y2="106" stroke="#c2410c" stroke-width="3"/>
+<text x="620" y="101" font-size="12" text-anchor="middle" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="700" y1="120" x2="700" y2="120" stroke="#1f2937" stroke-width="2"/>
+<polyline points="700,120 790,120" fill="none" stroke="#334155" stroke-width="2"/>
+<line x1="790" y1="120" x2="790" y2="130" stroke="#334155" stroke-width="2"/>
+<line x1="779" y1="130" x2="801" y2="130" stroke="#334155" stroke-width="2.5"/>
+<line x1="783" y1="135" x2="797" y2="135" stroke="#334155" stroke-width="2.5"/>
+<line x1="787" y1="140" x2="793" y2="140" stroke="#334155" stroke-width="2.5"/>
+<line x1="410" y1="92" x2="410" y2="102.0" stroke="#c2410c" stroke-width="2"/>
+<line x1="410" y1="112.0" x2="410" y2="122" stroke="#334155" stroke-width="2"/>
+<line x1="399" y1="102.0" x2="421" y2="102.0" stroke="#1f2937" stroke-width="3"/>
+<path d="M399,115.0 Q410,108.0 421,115.0" fill="none" stroke="#1f2937" stroke-width="3"/>
+<text x="395" y="101.0" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">+</text>
+<text x="424" y="111.0" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">100µF</text>
+<line x1="480" y1="92" x2="480" y2="102.0" stroke="#c2410c" stroke-width="2"/>
+<line x1="480" y1="112.0" x2="480" y2="122" stroke="#334155" stroke-width="2"/>
+<line x1="469" y1="102.0" x2="491" y2="102.0" stroke="#1f2937" stroke-width="3"/>
+<line x1="469" y1="112.0" x2="491" y2="112.0" stroke="#1f2937" stroke-width="3"/>
+<text x="494" y="111.0" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">100nF</text>
+<line x1="410" y1="92" x2="480" y2="92" stroke="#c2410c" stroke-width="2"/>
+<line x1="410" y1="122" x2="480" y2="122" stroke="#334155" stroke-width="2"/>
+<line x1="410" y1="92" x2="410" y2="78" stroke="#c2410c" stroke-width="2"/>
+<line x1="400" y1="78" x2="420" y2="78" stroke="#c2410c" stroke-width="3"/>
+<text x="410" y="73" font-size="12" text-anchor="middle" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="480" y1="122" x2="480" y2="132" stroke="#334155" stroke-width="2"/>
+<line x1="469" y1="132" x2="491" y2="132" stroke="#334155" stroke-width="2.5"/>
+<line x1="473" y1="137" x2="487" y2="137" stroke="#334155" stroke-width="2.5"/>
+<line x1="477" y1="142" x2="483" y2="142" stroke="#334155" stroke-width="2.5"/>
+<text x="445" y="158" font-size="11" text-anchor="middle" fill="#475569" font-weight="normal" font-style="italic">next to the Nano</text>
+<line x1="660.0" y1="900" x2="660.0" y2="930" stroke="#1f2937" stroke-width="3"/>
+<text x="660.0" y="948" font-size="13" text-anchor="middle" fill="#111827" font-weight="bold">Mini-USB → computer (power + serial)</text>
+<text x="660.0" y="966" font-size="12" text-anchor="middle" fill="#475569" font-weight="normal">D0/D1 are the USB serial: leave them free</text>
+<rect x="250" y="170" width="170" height="330" rx="6" fill="#f8fafc" stroke="#1f2937" stroke-width="2"/>
+<text x="335.0" y="190" font-size="15" text-anchor="middle" fill="#111827" font-weight="bold">TB6612FNG</text>
+<text x="335.0" y="207" font-size="12" text-anchor="middle" fill="#475569" font-weight="normal">motor driver</text>
+<text x="412" y="224" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">AIN1</text>
+<line x1="420" y1="220" x2="560" y2="220" stroke="#2563eb" stroke-width="2"/>
+<text x="568" y="224" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">D2</text>
+<text x="412" y="254" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">AIN2</text>
+<line x1="420" y1="250" x2="560" y2="250" stroke="#2563eb" stroke-width="2"/>
+<text x="568" y="254" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">D3</text>
+<text x="412" y="284" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">BIN1</text>
+<line x1="420" y1="280" x2="560" y2="280" stroke="#2563eb" stroke-width="2"/>
+<text x="568" y="284" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">D8</text>
+<text x="412" y="314" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">BIN2</text>
+<line x1="420" y1="310" x2="560" y2="310" stroke="#2563eb" stroke-width="2"/>
+<text x="568" y="314" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">D9</text>
+<text x="412" y="364" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">PWMA</text>
+<line x1="420" y1="360" x2="442" y2="360" stroke="#c2410c" stroke-width="2"/>
+<text x="446" y="364" font-size="12" text-anchor="start" fill="#c2410c" font-weight="bold">5V</text>
+<text x="412" y="394" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">PWMB</text>
+<line x1="420" y1="390" x2="442" y2="390" stroke="#c2410c" stroke-width="2"/>
+<text x="446" y="394" font-size="12" text-anchor="start" fill="#c2410c" font-weight="bold">5V</text>
+<text x="412" y="424" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">STBY</text>
+<line x1="420" y1="420" x2="442" y2="420" stroke="#c2410c" stroke-width="2"/>
+<text x="446" y="424" font-size="12" text-anchor="start" fill="#c2410c" font-weight="bold">5V</text>
+<text x="258" y="219" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">AO1</text>
+<text x="258" y="259" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">AO2</text>
+<text x="258" y="309" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">BO1</text>
+<text x="258" y="349" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">BO2</text>
+<text x="258" y="404" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">VM</text>
+<text x="258" y="434" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">VCC</text>
+<text x="258" y="474" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">GND</text>
+<line x1="250" y1="215" x2="150" y2="215" stroke="#2563eb" stroke-width="2"/>
+<line x1="250" y1="255" x2="150" y2="255" stroke="#2563eb" stroke-width="2"/>
+<path d="M150,215 A6.666666666666667,6.666666666666667 0 0 0 150,228.33333333333334 A6.666666666666667,6.666666666666667 0 0 0 150,241.66666666666666 A6.666666666666667,6.666666666666667 0 0 0 150,255.0" fill="none" stroke="#2563eb" stroke-width="2"/>
+<text x="124" y="239.0" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">coil A ~135 Ω</text>
+<line x1="250" y1="305" x2="150" y2="305" stroke="#2563eb" stroke-width="2"/>
+<line x1="250" y1="345" x2="150" y2="345" stroke="#2563eb" stroke-width="2"/>
+<path d="M150,305 A6.666666666666667,6.666666666666667 0 0 0 150,318.3333333333333 A6.666666666666667,6.666666666666667 0 0 0 150,331.6666666666667 A6.666666666666667,6.666666666666667 0 0 0 150,345.0" fill="none" stroke="#2563eb" stroke-width="2"/>
+<text x="124" y="329.0" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">coil B ~142 Ω</text>
+<rect x="20" y="170" width="149" height="250" rx="8" fill="none" stroke="#94a3b8" stroke-dasharray="5 4"/>
+<text x="30" y="190" font-size="13" text-anchor="start" fill="#111827" font-weight="bold">VDO 91 255 008</text>
+<text x="30" y="350" font-size="11" text-anchor="start" fill="#475569" font-weight="normal">4 pins, pairs crossed:</text>
+<text x="30" y="364" font-size="11" text-anchor="start" fill="#475569" font-weight="normal">find each coil with</text>
+<text x="30" y="378" font-size="11" text-anchor="start" fill="#475569" font-weight="normal">the multimeter.</text>
+<text x="30" y="392" font-size="11" text-anchor="start" fill="#475569" font-weight="normal">Wrong direction? Swap</text>
+<text x="30" y="406" font-size="11" text-anchor="start" fill="#475569" font-weight="normal">one coil's wires.</text>
+<line x1="250" y1="400" x2="228" y2="400" stroke="#c2410c" stroke-width="2"/>
+<text x="224" y="404" font-size="12" text-anchor="end" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="250" y1="430" x2="228" y2="430" stroke="#c2410c" stroke-width="2"/>
+<text x="224" y="434" font-size="12" text-anchor="end" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="250" y1="470" x2="232" y2="470" stroke="#334155" stroke-width="2"/>
+<line x1="232" y1="470" x2="232" y2="476" stroke="#334155" stroke-width="2"/>
+<line x1="223" y1="476" x2="241" y2="476" stroke="#334155" stroke-width="2.5"/>
+<line x1="227" y1="480" x2="237" y2="480" stroke="#334155" stroke-width="2.5"/>
+<line x1="230" y1="484" x2="234" y2="484" stroke="#334155" stroke-width="2.5"/>
+<line x1="70" y1="460" x2="70" y2="470.0" stroke="#c2410c" stroke-width="2"/>
+<line x1="70" y1="480.0" x2="70" y2="490" stroke="#334155" stroke-width="2"/>
+<line x1="59" y1="470.0" x2="81" y2="470.0" stroke="#1f2937" stroke-width="3"/>
+<path d="M59,483.0 Q70,476.0 81,483.0" fill="none" stroke="#1f2937" stroke-width="3"/>
+<text x="55" y="469.0" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">+</text>
+<text x="84" y="479.0" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">100µF</text>
+<line x1="140" y1="460" x2="140" y2="470.0" stroke="#c2410c" stroke-width="2"/>
+<line x1="140" y1="480.0" x2="140" y2="490" stroke="#334155" stroke-width="2"/>
+<line x1="129" y1="470.0" x2="151" y2="470.0" stroke="#1f2937" stroke-width="3"/>
+<line x1="129" y1="480.0" x2="151" y2="480.0" stroke="#1f2937" stroke-width="3"/>
+<text x="154" y="479.0" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">100nF</text>
+<line x1="70" y1="460" x2="140" y2="460" stroke="#c2410c" stroke-width="2"/>
+<line x1="70" y1="490" x2="140" y2="490" stroke="#334155" stroke-width="2"/>
+<line x1="70" y1="460" x2="70" y2="446" stroke="#c2410c" stroke-width="2"/>
+<line x1="60" y1="446" x2="80" y2="446" stroke="#c2410c" stroke-width="3"/>
+<text x="70" y="441" font-size="12" text-anchor="middle" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="140" y1="490" x2="140" y2="500" stroke="#334155" stroke-width="2"/>
+<line x1="129" y1="500" x2="151" y2="500" stroke="#334155" stroke-width="2.5"/>
+<line x1="133" y1="505" x2="147" y2="505" stroke="#334155" stroke-width="2.5"/>
+<line x1="137" y1="510" x2="143" y2="510" stroke="#334155" stroke-width="2.5"/>
+<text x="105" y="530" font-size="11" text-anchor="middle" fill="#475569" font-weight="normal" font-style="italic">next to VM</text>
+<text x="568" y="584" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">D4</text>
+<line x1="560" y1="580" x2="470" y2="580" stroke="#059669" stroke-width="2"/>
+<line x1="470" y1="580" x2="449.0" y2="580" stroke="#059669" stroke-width="2"/>
+<line x1="421.0" y1="580" x2="400" y2="580" stroke="#059669" stroke-width="2"/>
+<circle cx="449.0" cy="580" r="3" fill="white" stroke="#059669" stroke-width="2"/>
+<circle cx="421.0" cy="580" r="3" fill="white" stroke="#059669" stroke-width="2"/>
+<line x1="419.0" y1="570" x2="451.0" y2="570" stroke="#059669" stroke-width="2"/>
+<line x1="435.0" y1="570" x2="435.0" y2="562" stroke="#059669" stroke-width="2"/>
+<line x1="400" y1="580" x2="370" y2="580" stroke="#059669" stroke-width="2"/>
+<line x1="370" y1="580" x2="352" y2="580" stroke="#334155" stroke-width="2"/>
+<line x1="352" y1="580" x2="352" y2="586" stroke="#334155" stroke-width="2"/>
+<line x1="343" y1="586" x2="361" y2="586" stroke="#334155" stroke-width="2.5"/>
+<line x1="347" y1="590" x2="357" y2="590" stroke="#334155" stroke-width="2.5"/>
+<line x1="350" y1="594" x2="354" y2="594" stroke="#334155" stroke-width="2.5"/>
+<text x="435" y="602" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">CPU/RAM button</text>
+<text x="435" y="617" font-size="11" text-anchor="middle" fill="#475569" font-weight="normal">(INPUT_PULLUP, to GND)</text>
+<text x="568" y="664" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">D5</text>
+<line x1="560" y1="660" x2="500" y2="660" stroke="#059669" stroke-width="2"/>
+<line x1="430" y1="660" x2="447.0" y2="660" stroke="#059669" stroke-width="2"/>
+<line x1="483.0" y1="660" x2="500" y2="660" stroke="#059669" stroke-width="2"/>
+<rect x="447.0" y="653" width="36" height="14" fill="white" stroke="#059669" stroke-width="2"/>
+<text x="465.0" y="648" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">330Ω</text>
+<line x1="430" y1="660" x2="399.0" y2="660" stroke="#059669" stroke-width="2"/>
+<line x1="381.0" y1="660" x2="350" y2="660" stroke="#059669" stroke-width="2"/>
+<polygon points="399.0,651 399.0,669 383.0,660" fill="white" stroke="#059669" stroke-width="2"/>
+<line x1="382.0" y1="651" x2="382.0" y2="669" stroke="#059669" stroke-width="2"/>
+<line x1="388.0" y1="648" x2="395.0" y2="641" stroke="#059669" stroke-width="1.5"/>
+<line x1="395.0" y1="648" x2="402.0" y2="641" stroke="#059669" stroke-width="1.5"/>
+<line x1="350" y1="660" x2="330" y2="660" stroke="#059669" stroke-width="2"/>
+<line x1="330" y1="660" x2="312" y2="660" stroke="#334155" stroke-width="2"/>
+<line x1="312" y1="660" x2="312" y2="666" stroke="#334155" stroke-width="2"/>
+<line x1="303" y1="666" x2="321" y2="666" stroke="#334155" stroke-width="2.5"/>
+<line x1="307" y1="670" x2="317" y2="670" stroke="#334155" stroke-width="2.5"/>
+<line x1="310" y1="674" x2="314" y2="674" stroke="#334155" stroke-width="2.5"/>
+<text x="568" y="724" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">D6</text>
+<line x1="560" y1="720" x2="500" y2="720" stroke="#059669" stroke-width="2"/>
+<line x1="430" y1="720" x2="447.0" y2="720" stroke="#059669" stroke-width="2"/>
+<line x1="483.0" y1="720" x2="500" y2="720" stroke="#059669" stroke-width="2"/>
+<rect x="447.0" y="713" width="36" height="14" fill="white" stroke="#059669" stroke-width="2"/>
+<text x="465.0" y="708" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">330Ω</text>
+<line x1="430" y1="720" x2="399.0" y2="720" stroke="#059669" stroke-width="2"/>
+<line x1="381.0" y1="720" x2="350" y2="720" stroke="#059669" stroke-width="2"/>
+<polygon points="399.0,711 399.0,729 383.0,720" fill="white" stroke="#059669" stroke-width="2"/>
+<line x1="382.0" y1="711" x2="382.0" y2="729" stroke="#059669" stroke-width="2"/>
+<line x1="388.0" y1="708" x2="395.0" y2="701" stroke="#059669" stroke-width="1.5"/>
+<line x1="395.0" y1="708" x2="402.0" y2="701" stroke="#059669" stroke-width="1.5"/>
+<line x1="350" y1="720" x2="330" y2="720" stroke="#059669" stroke-width="2"/>
+<line x1="330" y1="720" x2="312" y2="720" stroke="#334155" stroke-width="2"/>
+<line x1="312" y1="720" x2="312" y2="726" stroke="#334155" stroke-width="2"/>
+<line x1="303" y1="726" x2="321" y2="726" stroke="#334155" stroke-width="2.5"/>
+<line x1="307" y1="730" x2="317" y2="730" stroke="#334155" stroke-width="2.5"/>
+<line x1="310" y1="734" x2="314" y2="734" stroke="#334155" stroke-width="2.5"/>
+<text x="270" y="693" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">warning lights</text>
+<text x="270" y="708" font-size="11" text-anchor="end" fill="#475569" font-weight="normal">(salvaged LEDs)</text>
+<text x="568" y="804" font-size="12" text-anchor="start" fill="#9ca3af" font-weight="normal">D11</text>
+<line x1="560" y1="800" x2="470" y2="800" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 4"/>
+<line x1="470" y1="800" x2="449.0" y2="800" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 4"/>
+<line x1="421.0" y1="800" x2="400" y2="800" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 4"/>
+<circle cx="449.0" cy="800" r="3" fill="white" stroke="#9ca3af" stroke-width="2"/>
+<circle cx="421.0" cy="800" r="3" fill="white" stroke="#9ca3af" stroke-width="2"/>
+<line x1="419.0" y1="790" x2="451.0" y2="790" stroke="#9ca3af" stroke-width="2"/>
+<line x1="435.0" y1="790" x2="435.0" y2="782" stroke="#9ca3af" stroke-width="2"/>
+<line x1="400" y1="800" x2="370" y2="800" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 4"/>
+<line x1="370" y1="800" x2="352" y2="800" stroke="#334155" stroke-width="2"/>
+<line x1="352" y1="800" x2="352" y2="806" stroke="#334155" stroke-width="2"/>
+<line x1="343" y1="806" x2="361" y2="806" stroke="#334155" stroke-width="2.5"/>
+<line x1="347" y1="810" x2="357" y2="810" stroke="#334155" stroke-width="2.5"/>
+<line x1="350" y1="814" x2="354" y2="814" stroke="#334155" stroke-width="2.5"/>
+<text x="435" y="822" font-size="12" text-anchor="middle" fill="#9ca3af" font-weight="normal">Pomodoro button (future)</text>
+<text x="568" y="864" font-size="12" text-anchor="start" fill="#9ca3af" font-weight="normal">D13</text>
+<line x1="560" y1="860" x2="440" y2="860" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 4"/>
+<rect x="400" y="848" width="40" height="24" rx="12" fill="white" stroke="#9ca3af" stroke-width="2"/>
+<text x="420" y="864" font-size="11" text-anchor="middle" fill="#9ca3af" font-weight="normal">piezo</text>
+<line x1="400" y1="860" x2="370" y2="860" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 4"/>
+<line x1="370" y1="860" x2="352" y2="860" stroke="#334155" stroke-width="2"/>
+<line x1="352" y1="860" x2="352" y2="866" stroke="#334155" stroke-width="2"/>
+<line x1="343" y1="866" x2="361" y2="866" stroke="#334155" stroke-width="2.5"/>
+<line x1="347" y1="870" x2="357" y2="870" stroke="#334155" stroke-width="2.5"/>
+<line x1="350" y1="874" x2="354" y2="874" stroke="#334155" stroke-width="2.5"/>
+<text x="420" y="890" font-size="12" text-anchor="middle" fill="#9ca3af" font-weight="normal">passive piezo (future)</text>
+<rect x="1010" y="100" width="190" height="475" rx="6" fill="#f8fafc" stroke="#1f2937" stroke-width="2"/>
+<text x="1105.0" y="120" font-size="15" text-anchor="middle" fill="#111827" font-weight="bold">16×2 LCD</text>
+<text x="1105.0" y="137" font-size="12" text-anchor="middle" fill="#475569" font-weight="normal">JHD162A, 4-bit mode</text>
+<text x="1020" y="179" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">1 VSS</text>
+<text x="1020" y="204" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">2 VDD</text>
+<text x="1020" y="229" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">3 V0</text>
+<text x="1020" y="254" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">4 RS</text>
+<text x="1020" y="279" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">5 RW</text>
+<text x="1020" y="304" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">6 E</text>
+<text x="1020" y="329" font-size="12" text-anchor="start" fill="#9ca3af" font-weight="normal">7 D0</text>
+<text x="1020" y="354" font-size="12" text-anchor="start" fill="#9ca3af" font-weight="normal">8 D1</text>
+<text x="1020" y="379" font-size="12" text-anchor="start" fill="#9ca3af" font-weight="normal">9 D2</text>
+<text x="1020" y="404" font-size="12" text-anchor="start" fill="#9ca3af" font-weight="normal">10 D3</text>
+<text x="1020" y="429" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">11 D4</text>
+<text x="1020" y="454" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">12 D5</text>
+<text x="1020" y="479" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">13 D6</text>
+<text x="1020" y="504" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">14 D7</text>
+<text x="1020" y="529" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">15 A</text>
+<text x="1020" y="554" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">16 K</text>
+<text x="1190" y="354" font-size="11" text-anchor="end" fill="#9ca3af" font-weight="normal">not</text>
+<text x="1190" y="379" font-size="11" text-anchor="end" fill="#9ca3af" font-weight="normal">connected</text>
+<line x1="1010" y1="175" x2="992" y2="175" stroke="#334155" stroke-width="2"/>
+<line x1="992" y1="175" x2="992" y2="181" stroke="#334155" stroke-width="2"/>
+<line x1="983" y1="181" x2="1001" y2="181" stroke="#334155" stroke-width="2.5"/>
+<line x1="987" y1="185" x2="997" y2="185" stroke="#334155" stroke-width="2.5"/>
+<line x1="990" y1="189" x2="994" y2="189" stroke="#334155" stroke-width="2.5"/>
+<line x1="1010" y1="200" x2="988" y2="200" stroke="#c2410c" stroke-width="2"/>
+<text x="984" y="204" font-size="12" text-anchor="end" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="1010" y1="225" x2="988" y2="225" stroke="#7c3aed" stroke-width="2"/>
+<text x="984" y="229" font-size="12" text-anchor="end" fill="#7c3aed" font-weight="bold">V0</text>
+<line x1="1010" y1="275" x2="992" y2="275" stroke="#334155" stroke-width="2"/>
+<line x1="992" y1="275" x2="992" y2="281" stroke="#334155" stroke-width="2"/>
+<line x1="983" y1="281" x2="1001" y2="281" stroke="#334155" stroke-width="2.5"/>
+<line x1="987" y1="285" x2="997" y2="285" stroke="#334155" stroke-width="2.5"/>
+<line x1="990" y1="289" x2="994" y2="289" stroke="#334155" stroke-width="2.5"/>
+<line x1="760" y1="250" x2="1010" y2="250" stroke="#7c3aed" stroke-width="2"/>
+<text x="752" y="254" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">D7</text>
+<line x1="760" y1="300" x2="1010" y2="300" stroke="#7c3aed" stroke-width="2"/>
+<text x="752" y="304" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">D12</text>
+<line x1="760" y1="425" x2="1010" y2="425" stroke="#7c3aed" stroke-width="2"/>
+<text x="752" y="429" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">A0</text>
+<line x1="760" y1="450" x2="1010" y2="450" stroke="#7c3aed" stroke-width="2"/>
+<text x="752" y="454" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">A1</text>
+<line x1="760" y1="475" x2="1010" y2="475" stroke="#7c3aed" stroke-width="2"/>
+<text x="752" y="479" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">A2</text>
+<line x1="760" y1="500" x2="1010" y2="500" stroke="#7c3aed" stroke-width="2"/>
+<text x="752" y="504" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">A3</text>
+<line x1="1010" y1="525" x2="988" y2="525" stroke="#c2410c" stroke-width="2"/>
+<text x="984" y="529" font-size="12" text-anchor="end" fill="#c2410c" font-weight="bold">5V</text>
+<text x="1300" y="112" font-size="13" text-anchor="middle" fill="#111827" font-weight="bold">contrast</text>
+<line x1="1300" y1="140" x2="1300" y2="126" stroke="#c2410c" stroke-width="2"/>
+<line x1="1290" y1="126" x2="1310" y2="126" stroke="#c2410c" stroke-width="3"/>
+<text x="1300" y="121" font-size="12" text-anchor="middle" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="1300" y1="140" x2="1300" y2="162.0" stroke="#1f2937" stroke-width="2"/>
+<line x1="1300" y1="198.0" x2="1300" y2="220" stroke="#1f2937" stroke-width="2"/>
+<rect x="1293" y="162.0" width="14" height="36" fill="white" stroke="#1f2937" stroke-width="2"/>
+<text x="1312" y="184.0" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">10 kΩ</text>
+<line x1="1300" y1="220" x2="1300" y2="230" stroke="#334155" stroke-width="2"/>
+<line x1="1289" y1="230" x2="1311" y2="230" stroke="#334155" stroke-width="2.5"/>
+<line x1="1293" y1="235" x2="1307" y2="235" stroke="#334155" stroke-width="2.5"/>
+<line x1="1297" y1="240" x2="1303" y2="240" stroke="#334155" stroke-width="2.5"/>
+<polygon points="1292,180 1280,173 1280,187" fill="#7c3aed"/>
+<line x1="1280" y1="180" x2="1250" y2="180" stroke="#7c3aed" stroke-width="2"/>
+<text x="1246" y="184" font-size="12" text-anchor="end" fill="#7c3aed" font-weight="bold">V0</text>
+<text x="1300" y="262" font-size="11" text-anchor="middle" fill="#475569" font-weight="normal">trimpot (3296W)</text>
+<line x1="1290" y1="340" x2="1290" y2="355.0" stroke="#c2410c" stroke-width="2"/>
+<line x1="1290" y1="365.0" x2="1290" y2="380" stroke="#334155" stroke-width="2"/>
+<line x1="1279" y1="355.0" x2="1301" y2="355.0" stroke="#1f2937" stroke-width="3"/>
+<path d="M1279,368.0 Q1290,361.0 1301,368.0" fill="none" stroke="#1f2937" stroke-width="3"/>
+<text x="1275" y="354.0" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">+</text>
+<text x="1304" y="364.0" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">100µF</text>
+<line x1="1360" y1="340" x2="1360" y2="355.0" stroke="#c2410c" stroke-width="2"/>
+<line x1="1360" y1="365.0" x2="1360" y2="380" stroke="#334155" stroke-width="2"/>
+<line x1="1349" y1="355.0" x2="1371" y2="355.0" stroke="#1f2937" stroke-width="3"/>
+<line x1="1349" y1="365.0" x2="1371" y2="365.0" stroke="#1f2937" stroke-width="3"/>
+<text x="1374" y="364.0" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">100nF</text>
+<line x1="1290" y1="340" x2="1360" y2="340" stroke="#c2410c" stroke-width="2"/>
+<line x1="1290" y1="380" x2="1360" y2="380" stroke="#334155" stroke-width="2"/>
+<line x1="1290" y1="340" x2="1290" y2="326" stroke="#c2410c" stroke-width="2"/>
+<line x1="1280" y1="326" x2="1300" y2="326" stroke="#c2410c" stroke-width="3"/>
+<text x="1290" y="321" font-size="12" text-anchor="middle" fill="#c2410c" font-weight="bold">5V</text>
+<line x1="1360" y1="380" x2="1360" y2="390" stroke="#334155" stroke-width="2"/>
+<line x1="1349" y1="390" x2="1371" y2="390" stroke="#334155" stroke-width="2.5"/>
+<line x1="1353" y1="395" x2="1367" y2="395" stroke="#334155" stroke-width="2.5"/>
+<line x1="1357" y1="400" x2="1363" y2="400" stroke="#334155" stroke-width="2.5"/>
+<text x="1325" y="418" font-size="11" text-anchor="middle" fill="#475569" font-weight="normal" font-style="italic">next to the LCD</text>
+<line x1="1030" y1="620" x2="1370" y2="620" stroke="#c2410c" stroke-width="2"/>
+<line x1="1030" y1="620" x2="1030" y2="606" stroke="#c2410c" stroke-width="2"/>
+<line x1="1020" y1="606" x2="1040" y2="606" stroke="#c2410c" stroke-width="3"/>
+<text x="1030" y="601" font-size="12" text-anchor="middle" fill="#c2410c" font-weight="bold">5V</text>
+<circle cx="1090" cy="620" r="4" fill="#c2410c"/>
+<line x1="1090" y1="620" x2="1090" y2="632.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1090" y1="668.0" x2="1090" y2="680" stroke="#d97706" stroke-width="2"/>
+<rect x="1083" y="632.0" width="14" height="36" fill="white" stroke="#d97706" stroke-width="2"/>
+<text x="1102" y="654.0" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">150Ω</text>
+<line x1="1090" y1="690" x2="1090" y2="706.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1090" y1="724.0" x2="1090" y2="740" stroke="#d97706" stroke-width="2"/>
+<polygon points="1081,706.0 1099,706.0 1090,722.0" fill="white" stroke="#d97706" stroke-width="2"/>
+<line x1="1081" y1="723.0" x2="1099" y2="723.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1102" y1="711.0" x2="1109" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1109" y1="711.0" x2="1116" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1090" y1="680" x2="1090" y2="690" stroke="#d97706" stroke-width="2"/>
+<line x1="1090" y1="740" x2="1090" y2="760" stroke="#d97706" stroke-width="2"/>
+<circle cx="1090" cy="760" r="4" fill="#d97706"/>
+<circle cx="1160" cy="620" r="4" fill="#c2410c"/>
+<line x1="1160" y1="620" x2="1160" y2="632.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1160" y1="668.0" x2="1160" y2="680" stroke="#d97706" stroke-width="2"/>
+<rect x="1153" y="632.0" width="14" height="36" fill="white" stroke="#d97706" stroke-width="2"/>
+<text x="1172" y="654.0" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">150Ω</text>
+<line x1="1160" y1="690" x2="1160" y2="706.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1160" y1="724.0" x2="1160" y2="740" stroke="#d97706" stroke-width="2"/>
+<polygon points="1151,706.0 1169,706.0 1160,722.0" fill="white" stroke="#d97706" stroke-width="2"/>
+<line x1="1151" y1="723.0" x2="1169" y2="723.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1172" y1="711.0" x2="1179" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1179" y1="711.0" x2="1186" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1160" y1="680" x2="1160" y2="690" stroke="#d97706" stroke-width="2"/>
+<line x1="1160" y1="740" x2="1160" y2="760" stroke="#d97706" stroke-width="2"/>
+<circle cx="1160" cy="760" r="4" fill="#d97706"/>
+<circle cx="1300" cy="620" r="4" fill="#c2410c"/>
+<line x1="1300" y1="620" x2="1300" y2="632.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1300" y1="668.0" x2="1300" y2="680" stroke="#d97706" stroke-width="2"/>
+<rect x="1293" y="632.0" width="14" height="36" fill="white" stroke="#d97706" stroke-width="2"/>
+<text x="1312" y="654.0" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">150Ω</text>
+<line x1="1300" y1="690" x2="1300" y2="706.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1300" y1="724.0" x2="1300" y2="740" stroke="#d97706" stroke-width="2"/>
+<polygon points="1291,706.0 1309,706.0 1300,722.0" fill="white" stroke="#d97706" stroke-width="2"/>
+<line x1="1291" y1="723.0" x2="1309" y2="723.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1312" y1="711.0" x2="1319" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1319" y1="711.0" x2="1326" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1300" y1="680" x2="1300" y2="690" stroke="#d97706" stroke-width="2"/>
+<line x1="1300" y1="740" x2="1300" y2="760" stroke="#d97706" stroke-width="2"/>
+<circle cx="1300" cy="760" r="4" fill="#d97706"/>
+<circle cx="1370" cy="620" r="4" fill="#c2410c"/>
+<line x1="1370" y1="620" x2="1370" y2="632.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1370" y1="668.0" x2="1370" y2="680" stroke="#d97706" stroke-width="2"/>
+<rect x="1363" y="632.0" width="14" height="36" fill="white" stroke="#d97706" stroke-width="2"/>
+<text x="1382" y="654.0" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">150Ω</text>
+<line x1="1370" y1="690" x2="1370" y2="706.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1370" y1="724.0" x2="1370" y2="740" stroke="#d97706" stroke-width="2"/>
+<polygon points="1361,706.0 1379,706.0 1370,722.0" fill="white" stroke="#d97706" stroke-width="2"/>
+<line x1="1361" y1="723.0" x2="1379" y2="723.0" stroke="#d97706" stroke-width="2"/>
+<line x1="1382" y1="711.0" x2="1389" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1389" y1="711.0" x2="1396" y2="704.0" stroke="#d97706" stroke-width="1.5"/>
+<line x1="1370" y1="680" x2="1370" y2="690" stroke="#d97706" stroke-width="2"/>
+<line x1="1370" y1="740" x2="1370" y2="760" stroke="#d97706" stroke-width="2"/>
+<circle cx="1370" cy="760" r="4" fill="#d97706"/>
+<text x="1230" y="700" font-size="22" text-anchor="middle" fill="#111827" font-weight="normal">…</text>
+<text x="1125" y="600" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">scale: ~8 × cool white</text>
+<text x="1335" y="600" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">needle: ~2 × orange</text>
+<line x1="1010" y1="550" x2="985" y2="550" stroke="#d97706" stroke-width="2"/>
+<polyline points="985,550 985,760 1370,760" fill="none" stroke="#d97706" stroke-width="2"/>
+<circle cx="985" cy="760" r="4" fill="#d97706"/>
+<text x="980" y="690" font-size="11" text-anchor="end" fill="#475569" font-weight="normal">LCD backlight</text>
+<text x="980" y="704" font-size="11" text-anchor="end" fill="#475569" font-weight="normal">(K, pin 16)</text>
+<circle cx="1200" cy="840" r="26" fill="white" stroke="#1f2937" stroke-width="2"/>
+<line x1="1190" y1="825" x2="1190" y2="855" stroke="#1f2937" stroke-width="3"/>
+<line x1="1164" y1="840" x2="1190" y2="840" stroke="#1f2937" stroke-width="2"/>
+<line x1="1190" y1="834" x2="1210" y2="818" stroke="#1f2937" stroke-width="2"/>
+<line x1="1190" y1="846" x2="1210" y2="862" stroke="#1f2937" stroke-width="2"/>
+<polygon points="1210,862 1201,860 1206,853" fill="#1f2937"/>
+<line x1="1210" y1="818" x2="1210" y2="760" stroke="#d97706" stroke-width="2"/>
+<circle cx="1210" cy="760" r="4" fill="#d97706"/>
+<line x1="1210" y1="862" x2="1210" y2="885" stroke="#334155" stroke-width="2"/>
+<line x1="1210" y1="885" x2="1210" y2="895" stroke="#334155" stroke-width="2"/>
+<line x1="1199" y1="895" x2="1221" y2="895" stroke="#334155" stroke-width="2.5"/>
+<line x1="1203" y1="900" x2="1217" y2="900" stroke="#334155" stroke-width="2.5"/>
+<line x1="1207" y1="905" x2="1213" y2="905" stroke="#334155" stroke-width="2.5"/>
+<text x="1234" y="832" font-size="13" text-anchor="start" fill="#111827" font-weight="bold">BC337</text>
+<text x="1234" y="848" font-size="11" text-anchor="start" fill="#475569" font-weight="normal">C top, E bottom</text>
+<text x="1234" y="862" font-size="11" text-anchor="start" fill="#475569" font-weight="normal">flat face: C B E</text>
+<text x="1216" y="810" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">C</text>
+<text x="1216" y="880" font-size="11" text-anchor="start" fill="#111827" font-weight="normal">E</text>
+<text x="1160" y="834" font-size="11" text-anchor="end" fill="#111827" font-weight="normal">B</text>
+<text x="752" y="844" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">D10</text>
+<line x1="760" y1="840" x2="1000" y2="840" stroke="#d97706" stroke-width="2"/>
+<line x1="1000" y1="840" x2="1032.0" y2="840" stroke="#d97706" stroke-width="2"/>
+<line x1="1068.0" y1="840" x2="1100" y2="840" stroke="#d97706" stroke-width="2"/>
+<rect x="1032.0" y="833" width="36" height="14" fill="white" stroke="#d97706" stroke-width="2"/>
+<text x="1050.0" y="828" font-size="12" text-anchor="middle" fill="#111827" font-weight="normal">1 kΩ</text>
+<line x1="1100" y1="840" x2="1164" y2="840" stroke="#d97706" stroke-width="2"/>
+<circle cx="1120" cy="840" r="4" fill="#d97706"/>
+<line x1="1120" y1="840" x2="1120" y2="857.0" stroke="#1f2937" stroke-width="2"/>
+<line x1="1120" y1="893.0" x2="1120" y2="910" stroke="#1f2937" stroke-width="2"/>
+<rect x="1113" y="857.0" width="14" height="36" fill="white" stroke="#1f2937" stroke-width="2"/>
+<text x="1108" y="879.0" font-size="12" text-anchor="end" fill="#111827" font-weight="normal">10 kΩ</text>
+<line x1="1120" y1="910" x2="1120" y2="920" stroke="#334155" stroke-width="2"/>
+<line x1="1109" y1="920" x2="1131" y2="920" stroke="#334155" stroke-width="2.5"/>
+<line x1="1113" y1="925" x2="1127" y2="925" stroke="#334155" stroke-width="2.5"/>
+<line x1="1117" y1="930" x2="1123" y2="930" stroke="#334155" stroke-width="2.5"/>
+<text x="1040" y="980" font-size="12" text-anchor="start" fill="#475569" font-weight="normal">lighting: brightness from D10 (PWM). Each LED has its own resistor.</text>
+<line x1="30" y1="920" x2="58" y2="920" stroke="#c2410c" stroke-width="3"/>
+<text x="66" y="924" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">5V</text>
+<line x1="195" y1="920" x2="223" y2="920" stroke="#334155" stroke-width="3"/>
+<text x="231" y="924" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">GND</text>
+<line x1="360" y1="920" x2="388" y2="920" stroke="#2563eb" stroke-width="3"/>
+<text x="396" y="924" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">motor</text>
+<line x1="30" y1="942" x2="58" y2="942" stroke="#7c3aed" stroke-width="3"/>
+<text x="66" y="946" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">LCD</text>
+<line x1="195" y1="942" x2="223" y2="942" stroke="#d97706" stroke-width="3"/>
+<text x="231" y="946" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">lighting</text>
+<line x1="360" y1="942" x2="388" y2="942" stroke="#059669" stroke-width="3"/>
+<text x="396" y="946" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">buttons / warnings</text>
+<line x1="30" y1="964" x2="58" y2="964" stroke="#9ca3af" stroke-width="3" stroke-dasharray="6 4"/>
+<text x="66" y="968" font-size="12" text-anchor="start" fill="#111827" font-weight="normal">future</text>
+</svg>
