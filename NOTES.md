@@ -173,7 +173,8 @@ nil. Alternative not done: resend only on receiving `READY`.
   readings; it resumes when the screen wakes (checks every 3 s).
   Detection: macOS `CGDisplayIsAsleep` (ctypes); Linux `xset q` on X11,
   `/sys/class/drm/*/dpms` on Wayland/console (untested); other systems
-  always assume on. Test on the Mac with `pmset displaysleepnow`.
+  always assume on. Tested on the Mac (2026-10-06): the needle parks and
+  the LCD text and lighting turn off.
 - **The LCD is only written while the needle is still:** writing blocks for
   a few ms and could make the motor lose steps mid-move.
 
@@ -313,7 +314,8 @@ short, a separate 5 V supply for lighting and motor, with a common ground.
    acrylic needle; add LEDs until it looks right.
 9. Move the motor to the TB6612FNG, add the capacitors and recalibrate
    `HOME_PHASE`; repeat the self-test with the lighting at maximum.
-10. Test the screen sleeping on the Mac (`pmset displaysleepnow`).
+10. ✅ Screen sleeping on the Mac works (2026-10-06): needle parks, LCD and
+    lighting off.
 11. Later: Pomodoro, warning lights, temperature (`°` = the LCD's 0xDF).
     Temperature: only Linux has a generic way (`psutil.sensors_temperatures()`).
     On the M1 Mac (MacBook Air, fanless) only through a private API, without
