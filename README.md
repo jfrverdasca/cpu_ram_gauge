@@ -28,7 +28,7 @@ serial to an Arduino, which drives the needle's stepper motor and a 16×2 LCD.
 | A0–A3 | LCD D4–D7 |
 | D10 | LCD backlight / lighting (PWM) |
 
-The full pin map, wiring, current budget and shopping list are in
+The full pin map, wiring, current budget and bill of materials are in
 [NOTES.md](NOTES.md).
 
 ## Layout

@@ -291,26 +291,42 @@ It fits, but more current lowers the Nano's 5V (input diode) and the motor
 loses torque: repeat the self-test with the lighting at maximum. If it falls
 short, a separate 5 V supply for lighting and motor, with a common ground.
 
-## Shopping list
-**Essential**
-- 1 **TB6612FNG** module (motor driver), or L293D + DIP-16 socket, with
-  less torque
-- 2 **BC337** transistors (1 spare)
-- 1 **10 kΩ multi-turn** trimpot, screw on top (3296W type)
-- Assorted **resistor kit** (including 150, 220, 330 Ω, 1 kΩ and 10 kΩ)
-- Capacitors: 3 × **100 µF** electrolytic (≥10 V), 4 × **100 nF**
-  ceramic
-- LEDs: none to buy; salvaged from old speedometers (cool white for the
-  scale, orange for the needle, 2 other colours for the warnings)
-- Perfboard (or a screw-terminal "expansion board" for the Nano), female
-  pin headers so the Nano is removable, solid-core wire, heat-shrink tubing
+## Bill of materials
+**Already at hand**
+| Item | Qty | Notes |
+|---|---|---|
+| VDO/Siemens 91 255 008 motor | 1 | |
+| Arduino Nano V3 (ATmega328P) | 1 | Mini-USB cable |
+| 16×2 LCD JHD162A | 1 | backlight resistor on board |
+| Push button (CPU/RAM) | 1 | |
+| Contrast pot, 7 kΩ | 1 | from the breadboard; 10 kΩ multi-turn (3296W) is nicer |
+| LEDs: cool white (scale), orange (needle), 2 warning colours | ~10 + 2 | salvaged from old speedometers |
+
+**To buy**
+| Item | Qty | Notes |
+|---|---|---|
+| **TB6612FNG** module | 1 | motor driver; PWMA, PWMB and STBY to 5V |
+| **BC337** transistor | 2 | 1 spare; or BC639 / PN2222A (check pinout) |
+| Resistor 150 Ω | 15 | lighting LEDs, all colours for now |
+| Resistor 330 Ω | 2 | warning lights |
+| Resistor 1 kΩ | 2 | transistor base (1 spare) |
+| Resistor 10 kΩ | 2 | base to ground (1 spare) |
+| Capacitor 100 µF electrolytic, ≥10 V | 3 | LCD, motor driver, Nano 5V |
+| Capacitor 100 nF ceramic ("104") | 4 | next to each 100 µF + 1 spare |
+| Perfboard (or Nano screw-terminal board) | 1 | |
+| Female pin header strip | 2 × 15 | Nano removable |
+| Solid-core wire, heat-shrink tubing | — | |
+
+Resistors: check the ones at home first.
 
 **Optional / later**
-- 1 m of **5 V COB** strip in cool white (scale), if the salvaged LEDs
-  leave dots
-- 1 **passive piezo** (Pomodoro)
-- 1 push button (Pomodoro)
-- Breadboard and jumper wires, if not at hand, to test the lighting
+| Item | Qty | Notes |
+|---|---|---|
+| 5 V COB strip, cool white | 1 m | only if the salvaged LEDs leave dots on the scale |
+| Passive piezo | 1 | Pomodoro |
+| Push button | 1 | Pomodoro |
+| Transparency film for the printer | 1–2 sheets | backlit dial |
+| Breadboard and jumper wires | — | if not at hand, to test the lighting |
 
 ## To do
 1. ✅ Count the travel in steps: **290** (measured twice).
