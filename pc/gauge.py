@@ -81,11 +81,20 @@ GLYPHS = [
      ".###.",
      "..#..",
      "....."],
+    ["..#..",   # 4: up arrow
+     ".###.",
+     "#.#.#",
+     "..#..",
+     "..#..",
+     "..#..",
+     "..#..",
+     "....."],
 ]
 CPU_ICON = chr(8)  # or "C" for a plain letter
 RAM_ICON = chr(1)  # or "R"
 UPTIME_ICON = chr(2)
 DOWN_ICON = chr(3)
+UP_ICON = chr(4)
 
 # Arduino, Arduino.org, CH340, FTDI, CP210x
 KNOWN_VIDS = {0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4}
@@ -198,35 +207,41 @@ def net_interface():
 
 
 class Network:
-    """Download speed of the internet interface, in bytes per second. None while
-    offline and until the second reading after a change of interface."""
+    """Download and upload speed of the internet interface, in bytes per second.
+    None while offline and until the second reading after a change of interface."""
 
     def __init__(self):
-        self.iface = self.last = self.down = None
+        self.iface = self.last = self.down = self.up = None
 
     def find_interface(self):
         iface = net_interface()
         if iface != self.iface:
             self.iface = iface
-            self.last = self.down = None
+            self.last = self.down = self.up = None
 
     def read(self):
         c = psutil.net_io_counters(pernic=True).get(self.iface) if self.iface else None
         now = time.monotonic()
         if c and self.last:
-            t, recv = self.last
+            t, recv, sent = self.last
             self.down = max(0, c.bytes_recv - recv) / (now - t)
+            self.up = max(0, c.bytes_sent - sent) / (now - t)
         else:
-            self.down = None
-        self.last = (now, c.bytes_recv) if c else None
+            self.down = self.up = None
+        self.last = (now, c.bytes_recv, c.bytes_sent) if c else None
 
     def text(self):
-        return DOWN_ICON + (rate(self.down) if self.down is not None else "--")
+        """The faster direction only, for lack of space; download on a tie."""
+        if self.down is None:
+            return DOWN_ICON + "--"
+        if self.up > self.down:
+            return UP_ICON + rate(self.up)
+        return DOWN_ICON + rate(self.down)
 
 
 def lcd_rows(cpu, ram, top_cpu, top_ram, net):
     """LCD text by "<row><needle>". The first row shows the metric the needle isn't."""
-    # "⏻ 03:26h   ↓1.2M": the download speed right-aligned
+    # "⏻ 03:26h   ↓1.2M": the faster of download/upload right-aligned
     left = f"{UPTIME_ICON} {uptime()}"
     bottom = left + net.text().rjust(LCD_WIDTH - len(left))
     return {

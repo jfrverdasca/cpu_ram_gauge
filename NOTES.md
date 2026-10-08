@@ -142,8 +142,9 @@ nil. Alternative not done: resend only on receiving `READY`.
   Today: row 1 with the icon of the other metric (chip / RAM stick; or a
   fixed letter C/R), the % and the top app (`▣ 5% Code`); row 2 with a power
   icon and the uptime as `HH:MMh` or, from 24 h on, `DD:HHd` (fixed width),
-  and on the right the download speed (`⏻ 03:26h   ↓1.2M`). Upload was left
-  out: it doesn't fit in 16 characters with the uptime in this format.
+  and on the right the network speed (`⏻ 03:26h   ↓1.2M`). Download and
+  upload don't both fit in 16 characters with the uptime, so it shows the
+  faster of the two, with ↓ or ↑ (download on a tie).
   Long app name: only the name slides (icon and % stay still), done in
   Python, one letter every 0.5 s and 2 s still at each end. The LCD's own
   scroll doesn't work: it shifts both rows together.
@@ -161,7 +162,8 @@ nil. Alternative not done: resend only on receiving `READY`.
   name, which changes from OS to OS (the Mac has 18 interfaces: `lo0`,
   `utun*`, `awdl0`…). With a VPN it counts the VPN's, only once. Interface
   rechecked every 5 s (Wi-Fi ↔ cable swap); speed read every 1 s (~70 µs).
-  With no network or right after an interface change it shows `↓--`. Units
+  With no network or right after an interface change it shows `↓--`.
+  Both directions read from the same counters, at no extra cost. Units
   of 1000 bytes/s, like Activity Monitor. psutil doesn't give per-process
   traffic, so there's no "top app" for the network.
 - **No data for 5 s** (or `P`): the needle parks at 0% and saves position and

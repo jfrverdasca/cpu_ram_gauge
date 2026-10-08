@@ -6,7 +6,7 @@ serial to an Arduino, which drives the needle's stepper motor and a 16×2 LCD.
 
 - **Needle:** CPU or RAM usage. A button toggles between them.
 - **LCD:** the other metric and the app using the most of it, uptime and
-  download speed.
+  network speed (download or upload, whichever is faster).
 - Parks the needle at 0% and turns the LCD off when the computer's screen
   sleeps or the script stops.
 
