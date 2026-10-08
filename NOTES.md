@@ -275,6 +275,24 @@ Full wiring diagram: [docs/wiring.svg](docs/wiring.svg)
       which brings the total to ~450 mA, almost at the USB limit. Options:
       brightness below max (PWM reduces consumption) or a separate 5 V supply.
     - The BC337 handles 800 mA: enough for the strip plus the LEDs.
+  - **Alternative (idea, untested): edge-lit light guide** for the scale.
+    The dotted acrylic panel from an old LCD screen (laptop or monitor):
+    LEDs shine into its edge, the dots send the light forward.
+    - Stack, back to front: reflector sheet → light guide cut to the scale
+      shape → diffuser sheet (hides the dots) → dial transparency. All of it
+      comes out of the same screen, and so do the white LEDs on the edge strip.
+    - 2 LEDs, one at each end of the arc, will likely leave the middle
+      darker. Use 3–4, or shine in from the arc's inner edge (closer to the
+      whole scale).
+    - The dot pattern is denser far from the original LEDs; once cut, it
+      no longer matches ours, so some unevenness is likely.
+    - Light-entry edge sanded smooth (polished if possible); other edges
+      with white or aluminium tape to keep the light inside.
+    - Acrylic cracks easily: score several times and snap for straight
+      cuts; coping saw / drill, slowly, for the arc and the shaft hole.
+    - **Test first:** whole panel, 2 LEDs against the edge, transparency on
+      top. If it isn't even enough, add LEDs before cutting.
+    - If it works: fewer LEDs than the ~8 planned, no dots, and no COB strip.
 - **Warning lights:** one LED per pin (D5/D6) with 330 Ω, no transistor.
 - LED: long leg = + (anode); flat side/short leg = − (cathode). On SMD LEDs
   the cut corner usually marks the cathode; confirm in diode mode.
@@ -350,6 +368,7 @@ LEDs, multimeter, flux, desoldering braid.
 | Item | Qty | For |
 |---|---|---|
 | 5 V COB strip, cool white | 1 m | only if the salvaged LEDs leave dots on the scale |
+| Old LCD screen (laptop/monitor) | 1 | salvage light guide, diffuser, reflector and LEDs; alternative to the strip |
 | Passive piezo | 1 | Pomodoro |
 | Push button | 1 | Pomodoro |
 | Transparency film for the printer | 1–2 sheets | backlit dial |
