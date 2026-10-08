@@ -220,6 +220,10 @@ nil. Alternative not done: resend only on receiving `READY`.
 
 Full wiring diagram: [docs/wiring.svg](docs/wiring.svg)
 (regenerate with `python3 docs/wiring.py docs/wiring.svg`).
+Perfboard layout: [docs/perfboard.svg](docs/perfboard.svg) (`docs/perfboard.py`,
+which also checks that no traces cross and every net is connected). On the
+board the motor's coil B goes to channel A and coil A to channel B; the
+motor pads are labelled by the bench-test wire, so the firmware is unchanged.
 
 ### Pin map (Nano)
 | Pin | Function |
