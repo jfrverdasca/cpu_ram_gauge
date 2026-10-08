@@ -59,7 +59,8 @@ RAM usage, driven by an Arduino over serial.
 ## Decided design
 - **A single needle**, with a **button** toggling between CPU and RAM.
   Button on `INPUT_PULLUP` to ground, 50 ms software debounce.
-- **0→100→0 sweep** as a self-test on a long press.
+- **0→100→0 sweep** as a self-test on a long press, with every LCD pixel on
+  (and full light) as a lamp test.
 - **The LCD replaces the mode lights:** it shows the metric the needle isn't
   showing; when toggling, it shows for 3 s which one is on the needle.
 - **Warning lights** (the cluster's pink bulb holders) become real warnings,
@@ -161,7 +162,7 @@ RAM usage, driven by an Arduino over serial.
 | `C45.3 R72.1` | CPU and RAM readings (every 50 ms) |
 | `T<row><needle><text>` | LCD text: row `0`/`1`, for when the needle shows CPU (`C`) or RAM (`R`) (every 0.25 s) |
 | `G<0-7><16 hex>` | 5×8 custom character, top row first; in text use `chr(n)`, except slot 0, which is `chr(8)` (byte 0 would end the line). Don't use `8 + n` for the others: 10 and 13 are `\n` and `\r` (every 5 s) |
-| `B<0-255>` | lighting brightness (PWM on D10); `0` turns the LCD off (every 5 s) |
+| `B<0-255>` | lighting brightness (PWM on D10), used only while data arrives (255 during the sweep and with no data); `0` turns the LCD off (every 5 s) |
 | `P` | park; the Arduino replies `PARKED` |
 | `Z<UTC seconds> <offset> <0/1>` | time for the clock module: UTC, standard offset in minutes, whether the zone has (EU) summer time (every 5 s) |
 

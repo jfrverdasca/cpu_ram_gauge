@@ -5,7 +5,8 @@
 // LCD character 0-7 (8 rows, top first), "B0".."B255" backlight (0 = LCD off, sent
 // when the computer's screen sleeps). "P\n" asks to park. "Z<UTC seconds> <standard
 // offset, minutes> <0/1 summer time>\n" sets the clock.
-// Button: short press toggles CPU/RAM; hold 1 s for a 0 -> 100 -> 0 sweep.
+// Button: short press toggles CPU/RAM; hold 1 s for a 0 -> 100 -> 0 sweep, with every
+// LCD pixel on (and full light) as a lamp test.
 // Hold the button while powering up to force a full homing.
 // The 16x2 LCD shows the text gauge.py sends for the current needle metric. After a
 // button press it shows which one the needle has for 3 s.
@@ -89,7 +90,7 @@ char text[2][2][17];            // LCD text from gauge.py: [row][needle shows RA
 uint8_t glyphs[8][8];           // LCD custom characters from gauge.py
 uint8_t glyphsChanged = 0;      // one bit per character, written by updateLcd()
 bool parked = false;            // EEPROM holds the current position
-uint8_t sweep = 0;              // 0 = off, 1 = going up, 2 = going down
+uint8_t sweep = 0;              // 0 = off, 1 = lamp test pending, 2 = going up, 3 = going down
 unsigned long switchedMs = 0;   // last CPU/RAM toggle (0 = also shown at boot)
 unsigned long wokeMs = 0;       // last press that woke the LCD
 bool screenOn = true;
@@ -409,9 +410,10 @@ int posFor(float percent) {
 }
 
 void updateTarget() {
+  if (sweep == 1) return;       // the needle finishes its move, then updateLcd() goes on
   if (sweep) {
-    target = sweep == 1 ? POS_MAX : POS_MIN;
-    if (stopped()) sweep = sweep == 1 ? 2 : 0;
+    target = sweep == 2 ? POS_MAX : POS_MIN;
+    if (stopped()) sweep = sweep == 2 ? 3 : 0;
     return;
   }
 
@@ -441,11 +443,21 @@ void printRow(uint8_t row, const char* text) {
   lcd.print(line);
 }
 
+// Lamp test for the sweep: every pixel on.
+void showAllPixels() {
+  char full[17];
+  memset(full, 0xFF, 16);       // 0xFF: the full 5x8 block in the LCD's character ROM
+  full[16] = '\0';
+  printRow(0, full);
+  printRow(1, full);
+}
+
 // Writing to the LCD blocks for a few ms, which could stall the motor mid-move,
 // so the display only updates while the needle is still.
 void updateLcd() {
   static unsigned long lastMs = 0;
-  if (dir != 0 || millis() - lastMs < LCD_REFRESH_MS) return;
+  // A pending lamp test goes out as soon as the needle is still
+  if (dir != 0 || (millis() - lastMs < LCD_REFRESH_MS && sweep != 1)) return;
   lastMs = millis();
 
   for (uint8_t n = 0; n < 8; n++) {
@@ -454,11 +466,11 @@ void updateLcd() {
   glyphsChanged = 0;
 
   // Off a minute after the last data, or when gauge.py sets 0. A press wakes it
-  // anyway, at full brightness if gauge.py set 0.
+  // anyway. gauge.py's brightness only while it sends data; full otherwise.
   static uint8_t backlight = 255;
-  bool on = (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
+  bool on = sweep || (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
             millis() - wokeMs < WAKE_MS;
-  uint8_t level = !on ? 0 : brightness > 0 ? brightness : 255;
+  uint8_t level = !on ? 0 : (sweep || brightness == 0 || !online()) ? 255 : brightness;
   if (level != backlight) {
     backlight = level;
     analogWrite(LCD_LIGHT, level);
@@ -471,6 +483,13 @@ void updateLcd() {
     shown = show;
     if (show) lcd.display();
     else lcd.noDisplay();
+  }
+  if (sweep) {
+    if (sweep == 1) {
+      showAllPixels();
+      sweep = 2;                // now the needle can start
+    }
+    return;
   }
 
   const char* top = text[0][showRam];

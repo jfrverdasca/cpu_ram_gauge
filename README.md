@@ -64,7 +64,7 @@ when the screen is asleep.
 ### Button
 
 - **Short press:** toggle the needle between CPU and RAM.
-- **Hold 1 s:** 0 → 100 → 0 sweep (self-test).
+- **Hold 1 s:** 0 → 100 → 0 sweep (self-test), with every LCD pixel on.
 - **Hold while powering up:** force a full homing against the end stop.
 
 ## Calibration
