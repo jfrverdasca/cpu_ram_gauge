@@ -116,7 +116,7 @@ def connect(port):
 
 def park(s):
     s.reset_input_buffer()
-    s.write(b"P\n")
+    s.write(b"\nP\n")  # the newline ends a line cut short by Ctrl+C
     deadline = time.monotonic() + 3
     while time.monotonic() < deadline:
         if s.readline().strip() == b"PARKED":
@@ -367,6 +367,9 @@ def main():
                         net.read()
                         next_net = now + NET_INTERVAL
                     if now >= next_text:
+                        # Text still queued is out of date: drop it, or a slow loop
+                        # lets the queue grow forever
+                        queue = deque(line for line in queue if line[0] != "T")
                         queue.extend(text_lines(lcd_rows(cpu, ram, top_cpu, top_ram, net)))
                         next_text = now + TEXT_INTERVAL
                 if queue:
