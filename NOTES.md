@@ -69,6 +69,26 @@ RAM usage, driven by an Arduino over serial.
 - **Pomodoro (future):** on the Arduino, so it works without the PC. Second
   button (short = start/pause, long = exit); work 100%→0%, break rises back
   to 100%; LCD with the exact time and count; alert via a **passive piezo**.
+- **Clock (future):** an RTC module with a backup battery (probably DS3231 or
+  DS1307 on I2C, 4 wires: VCC, GND, SDA → A4, SCL → A5; confirm the chip
+  when the module is at hand; a DS1302 has 5 wires and would need A4, A5
+  and D11 or D13, which are kept for the future features). With no data, instead
+  of `No data`, the needle shows the minutes (0–60%, 1% per minute; or
+  the whole scale).
+  - **LCD and lighting stay off** (the backlight LED fades with hours of
+    use): a short press shows the time for 10 s, like today with the screen
+    off.
+  - **Power is the real limit:** with the PC off most motherboards cut USB
+    5V, and the Arduino goes off with it. The coin cell only keeps the RTC
+    counting. Works while the PC is on without the script, asleep, or off
+    with USB power kept on (BIOS "USB power in S5" / ErP off; check by
+    charging a phone with the PC off). Otherwise a separate 5 V supply.
+  - `gauge.py` sets the time on every connection: never set by hand.
+  - Cheap DS3231 boards (ZS-042) charge the cell through a resistor + diode:
+    with a non-rechargeable CR2032 remove them, or use an LIR2032.
+  - Fits together with the Pomodoro: separate pins (A4/A5 vs D11/D13).
+    Firmware today (2026-10-08): 10.5 KB of 30 KB flash, 535 of 2048 bytes
+    of RAM; Wire + an RTC library add roughly 3–5 KB and ~250 bytes.
 - **Margins on the scale:** 0% = 12 half-steps above the end stop
   (`POS_MIN = 12`), 100% = 12 below the other (`POS_MAX = 278`). They can go
   down to 4–6 if the scale needs it; less than that and the needle hits.
@@ -204,7 +224,8 @@ Full wiring diagram: [docs/wiring.svg](docs/wiring.svg)
 | D10 | lighting: LCD + needle + scale (PWM, via transistor) |
 | D11 | Pomodoro button (future) |
 | D13 | piezo (future; `tone()` doesn't interfere with PWM on D10) |
-| A4, A5, A6, A7 | free (A4/A5 = I2C; A6/A7 analog input only) |
+| A4, A5 | RTC clock, I2C SDA/SCL (future) |
+| A6, A7 | free (analog input only) |
 | D0, D1 | **don't use**: they're serial/USB |
 
 ### LCD
@@ -308,6 +329,8 @@ Full wiring diagram: [docs/wiring.svg](docs/wiring.svg)
 | Motor (with driver) | ~80 mA |
 | ~10 lighting LEDs | ~150 mA |
 | 2 warnings | ~20 mA |
+| RTC module (future) | ~1–5 mA |
+| Piezo (future, only while beeping) | ~10–30 mA |
 | **Total** | **~300 mA** |
 
 It fits, but more current lowers the Nano's 5V (input diode) and the motor
@@ -372,6 +395,7 @@ LEDs, multimeter, flux, desoldering braid.
 | 5 V COB strip, cool white | 1 m | only if the salvaged LEDs leave dots on the scale |
 | Old LCD screen (laptop/monitor) | 1 | salvage light guide, diffuser, reflector and LEDs; alternative to the strip |
 | Passive piezo | 1 | Pomodoro |
+| RTC module with backup battery | 1 | clock with no data (have; confirm model) |
 | Push button | 1 | Pomodoro |
 | Transparency film for the printer | 1–2 sheets | backlit dial |
 | Breadboard and jumper wires | — | testing the lighting, if not at hand |
@@ -399,7 +423,7 @@ LEDs, multimeter, flux, desoldering braid.
    `HOME_PHASE`; repeat the self-test with the lighting at maximum.
 10. ✅ Screen sleeping on the Mac works (2026-10-06): needle parks, LCD and
     lighting off.
-11. Later: Pomodoro, warning lights, temperature (`°` = the LCD's 0xDF).
+11. Later: Pomodoro, clock (RTC), warning lights, temperature (`°` = the LCD's 0xDF).
     Temperature: only Linux has a generic way (`psutil.sensors_temperatures()`).
     On the M1 Mac (MacBook Air, fanless) only through a private API, without
     sudo, via `ctypes` (like Stats/macmon): fragile across chips and macOS
