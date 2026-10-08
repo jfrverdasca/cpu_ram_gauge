@@ -15,8 +15,8 @@ XL = 12            # Nano left pin column (D13 ... VIN)
 XR = XL + 6        # Nano right pin column (D12 ... TX1)
 Y0 = 6             # row of the Nano's first pins (USB end)
 XP = XL - 9        # LCD pads
-XD = XR + 7        # driver input row (PWMA ... GND)
-XO = XD + DRV_GAP  # driver output row (VM ... GND)
+XD = XR + 7        # driver input row (GND ... PWMA), chip side up
+XO = XD + DRV_GAP  # driver output row (GND ... VM)
 XG = XO + 4        # ground riser on the right edge
 W, H = XG + 2, Y0 + 20
 
@@ -38,10 +38,11 @@ def b(k):
 
 NANO_L = ["D13", "3V3", "REF", "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "5V", "RST", "GND", "VIN"]
 NANO_R = ["D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "GND", "RST", "RX0", "TX1"]
-DRV_IN = [("PWMA", "5V"), ("AIN2", "D9"), ("AIN1", "D8"), ("STBY", "5V"),
-          ("BIN1", "D2"), ("BIN2", "D3"), ("PWMB", "5V"), ("GND", "GND")]
-DRV_OUT = [("VM", "5V"), ("VCC", "5V"), ("GND", "GND"), ("AO1", "AO1"),
-           ("AO2", "AO2"), ("BO2", "BO2"), ("BO1", "BO1"), ("GND", "GND")]
+# Top to bottom, module chip side up with the inputs towards the Nano
+DRV_IN = [("GND", "GND"), ("PWMB", "5V"), ("BIN2", "D9"), ("BIN1", "D8"),
+          ("STBY", "5V"), ("AIN1", "D2"), ("AIN2", "D3"), ("PWMA", "5V")]
+DRV_OUT = [("GND", "GND"), ("BO1", "BO1"), ("BO2", "BO2"), ("AO2", "AO2"),
+           ("AO1", "AO1"), ("GND", "GND"), ("VCC", "5V"), ("VM", "5V")]
 
 pins = {}   # hole -> net, for everything that goes through a hole
 groups = []  # off-board pads: (title, [(hole, label)], label side)
@@ -82,8 +83,8 @@ def pads(title, items, side):
 # Nano and driver caps: 100 nF ceramic + 100 uF electrolytic (+ on 5V, the upper leg)
 part("cap", [(XL + 2, b(2)), (XL + 2, b(3))], ["5V", "GND"], "104")
 part("ecap", [(XL + 4, b(2)), (XL + 4, b(3))], ["5V", "GND"], "100µ")
-part("cap", [(XO + 1, r(2)), (XO + 1, r(3))], ["5V", "GND"], "104", (0.3, -1.1))
-part("ecap", [(XO + 2, r(2)), (XO + 2, r(3))], ["5V", "GND"], "100µ", (1.3, -1.1))
+part("cap", [(XO + 1, r(9)), (XO + 1, r(8))], ["5V", "GND"], "104", (0.3, 1.1))
+part("ecap", [(XO + 2, r(9)), (XO + 2, r(8))], ["5V", "GND"], "100µ", (1.3, 1.1))
 # LCD caps
 part("cap", [(XL - 8, r(12)), (XL - 8, r(13))], ["5V", "GND"], "104")
 part("ecap", [(XL - 3, r(12)), (XL - 3, r(13))], ["5V", "GND"], "100µ")
@@ -102,8 +103,8 @@ lcd = [(r(0), "D7", "4 RS"), (r(1), "D12", "6 E"), (r(2), "GND", "1 VSS"),
        (r(3), "A0", "11 D4"), (r(4), "A1", "12 D5"), (r(5), "A2", "13 D6"), (r(6), "A3", "14 D7"),
        (r(8), "GND", "5 RW"), (r(10), "V0", "3 V0"), (r(12), "5V", "2 VDD")]
 pads("LCD", [((XP, y), net, label) for y, net, label in lcd], "left")
-pads("motor", [((XO + 2, r(5)), "AO1", "B1"), ((XO + 2, r(6)), "AO2", "B2"),
-               ((XO + 2, r(7)), "BO2", "A2"), ((XO + 2, r(8)), "BO1", "A1")], "right")
+pads("motor", [((XO + 2, r(3)), "BO1", "B1"), ((XO + 2, r(4)), "BO2", "B2"),
+               ((XO + 2, r(5)), "AO2", "A2"), ((XO + 2, r(6)), "AO1", "A1")], "right")
 light = []
 for n in range(4):
     light += [((XD + 2 + n, t(1)), "COLL", f"{n + 1}−"), ((XD + 2 + n, r(0)), "5V", f"{n + 1}+")]
@@ -122,20 +123,19 @@ traces = [
     ("5V", [(XL, r(11)), (XL - 1, r(11)), (XL - 1, r(12)), (XP, r(12))]),
     ("5V", [(XL - 2, r(10)), (XL - 2, r(12))]),
     ("5V", [(XL - 6, r(11)), (XL - 6, r(12))]),
-    ("5V", [(XL, r(11)), (XL + 2, r(11)), (XL + 2, b(2)), (XD + 1, b(2)), (XD + 1, r(2)), (XO, r(2))]),
-    ("5V", [(XD + 1, r(2)), (XD, r(2))]),
-    ("5V", [(XD + 1, r(3)), (XO, r(3))]),
-    ("5V", [(XD + 1, r(5)), (XD, r(5))]),
-    ("5V", [(XD + 1, r(8)), (XD, r(8))]),
-    ("5V", [(XO, r(2)), (XO + 2, r(2))]),
-    ("5V", [(XO, r(2)), (XO, r(0)), (XD + 2, r(0))]),
+    ("5V", [(XL, r(11)), (XL + 2, r(11)), (XL + 2, b(2)), (XD + 1, b(2)), (XD + 1, r(3)), (XD, r(3))]),
+    ("5V", [(XD + 1, r(6)), (XD, r(6))]),
+    ("5V", [(XD + 1, r(8)), (XO, r(8))]),
+    ("5V", [(XD, r(9)), (XO + 2, r(9))]),
+    ("5V", [(XD, r(3)), (XD - 1, r(3)), (XD - 1, r(0)), (XD + 5, r(0))]),
     # GND: round the LCD pads, through the Nano's middle, up the right edge
     ("GND", [(XL, r(13)), (XP - 1, r(13)), (XP - 1, r(2)), (XP, r(2)), (XL - 2, r(2)), (XL - 2, r(1))]),
     ("GND", [(XP - 1, r(8)), (XL - 4, r(8)), (XL - 4, r(9)), (XL - 2, r(9))]),
     ("GND", [(XL - 6, r(8)), (XL - 6, r(9))]),
     ("GND", [(XL, r(13)), (XL + 1, r(13)), (XL + 1, b(3)), (XG, b(3)), (XG, t(5)), (XR + 1, t(5))]),
-    ("GND", [(XO, b(3)), (XO, r(9))]),
-    ("GND", [(XG, r(3)), (XO + 1, r(3))]),
+    ("GND", [(XG, r(7)), (XO, r(7))]),
+    ("GND", [(XO + 1, r(7)), (XO + 1, r(8))]),
+    ("GND", [(XO + 2, r(7)), (XO + 2, r(8))]),
     ("GND", [(XR + 1, t(4)), (XR + 1, t(5))]),
     ("GND", [(XR + 7, t(3)), (XR + 7, t(5))]),
     ("GND", [(XR, r(11)), (XR + 3, r(11)), (XR + 3, r(8))]),
@@ -145,12 +145,12 @@ traces = [
     ("D7", [(XR, r(5)), (XL + 1, r(5)), (XL + 1, t(1)), (XP - 1, t(1)), (XP - 1, r(0)), (XP, r(0))]),
     ("D12", [(XR, r(0)), (XR, t(2)), (XP - 2, t(2)), (XP - 2, r(1)), (XP, r(1))]),
     ("V0", [(XL - 6, r(10)), (XP, r(10))]),
-    # motor: coil B on channel A, coil A on channel B
-    ("D9", [(XR, r(3)), (XD, r(3))]),
-    ("D8", [(XR, r(4)), (XD, r(4))]),
-    ("D2", [(XR, r(10)), (XL + 5, r(10)), (XL + 5, b(0)), (XD - 2, b(0)), (XD - 2, r(6)), (XD, r(6))]),
-    ("D3", [(XR, r(9)), (XL + 4, r(9)), (XL + 4, b(1)), (XD - 1, b(1)), (XD - 1, r(7)), (XD, r(7))]),
-    *[(net, [(XO, r(5 + k)), (XO + 2, r(5 + k))]) for k, net in enumerate(("AO1", "AO2", "BO2", "BO1"))],
+    # motor: coil B on channel B, coil A on channel A
+    ("D9", [(XR, r(3)), (XD - 3, r(3)), (XD - 3, r(4)), (XD, r(4))]),
+    ("D8", [(XR, r(4)), (XD - 4, r(4)), (XD - 4, r(5)), (XD, r(5))]),
+    ("D2", [(XR, r(10)), (XL + 5, r(10)), (XL + 5, b(0)), (XD - 2, b(0)), (XD - 2, r(7)), (XD, r(7))]),
+    ("D3", [(XR, r(9)), (XL + 4, r(9)), (XL + 4, b(1)), (XD - 1, b(1)), (XD - 1, r(8)), (XD, r(8))]),
+    *[(net, [(XO, r(3 + k)), (XO + 2, r(3 + k))]) for k, net in enumerate(("BO1", "BO2", "AO2", "AO1"))],
     # warnings and button
     ("D6", [(XR, r(6)), (XR + 1, r(6))]),
     ("D5", [(XR, r(7)), (XR + 1, r(7))]),
@@ -200,8 +200,8 @@ for net, pts in traces:
             prev = h
 # connected inside the Nano and the driver module
 union((XL, r(13)), (XR, r(11)))
-for y in (r(4), r(9)):
-    union((XD, r(9)), (XO, y))
+for y in (r(2), r(7)):
+    union((XD, r(2)), (XO, y))
 for net in {n for n in pins.values() if not n.startswith("nc:")}:
     roots = {find(h) for h, n in pins.items() if n == net}
     if len(roots) > 1:
@@ -368,7 +368,7 @@ def nano_labels(pn):
 
 
 def group_titles(pn):
-    spots = {"LCD": (XP, t(2.6), "middle"), "motor": (XO + 2.4, r(4.3), "middle"),
+    spots = {"LCD": (XP, t(2.6), "middle"), "motor": (XO + 2.4, r(2.3), "middle"),
              "lighting": (XD + 3.5, t(2.6), "middle"), "warnings": (XR + 4.6, r(5.2), "middle"),
              "button": (XR + 1.6, r(10.2), "middle"), "Pomodoro": (XR + 1, t(5.6), "middle"),
              "piezo": (XL - 2.5, t(0.6), "middle"), "RTC": (XL - 2, r(6.5), "middle")}
@@ -421,7 +421,7 @@ text(cx, cy, "USB end", 10, "middle", c="#475569", halo=True)
 notes = [
     ("Before soldering", [
         "Nano pins assumed as on its silkscreen (D13 next to the USB on one side, D12 on the other). Check yours.",
-        f"Driver: common TB6612FNG module, rows {DRV_GAP} holes apart, PWMA and VM at the same end. Measure "
+        f"Driver: common TB6612FNG module, rows {DRV_GAP} holes apart, chip side up, GND at the top of both rows. Measure "
         "yours; if different, change DRV_GAP and run the script again.",
         "Nano on female headers. Module GND pins are joined on the module, so one is enough here.",
     ]),
@@ -429,7 +429,7 @@ notes = [
         "LCD: the pin number on each pad. Pins 15 (A) and 16 (K) go to lighting pair 1.",
         "Lighting: top row − (transistor), bottom row + (5V). 1 LCD backlight, 2 scale, 3 needle, 4 spare.",
         "Each LED with its own 150 Ω, soldered at the LED.",
-        "Motor: B1/B2/A1/A2 = the wire that was on D8/D9/D2/D3 in the bench test. Coil B on channel A.",
+        "Motor: B1/B2/A1/A2 = the wire that was on D8/D9/D2/D3 in the bench test.",
         "Warnings: LED + to D5/D6 (330 Ω on the board), − to GND. Button: D4 and GND.",
         "Future: Pomodoro button (D11), piezo (D13), RTC (A4 SDA, A5 SCL).",
     ]),

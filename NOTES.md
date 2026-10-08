@@ -69,31 +69,47 @@ RAM usage, driven by an Arduino over serial.
 - **Pomodoro (future):** on the Arduino, so it works without the PC. Second
   button (short = start/pause, long = exit); work 100%→0%, break rises back
   to 100%; LCD with the exact time and count; alert via a **passive piezo**.
-- **Clock (future):** an RTC module with a backup battery (probably DS3231 or
-  DS1307 on I2C, 4 wires: VCC, GND, SDA → A4, SCL → A5; confirm the chip
-  when the module is at hand; a DS1302 has 5 wires and would need A4, A5
-  and D11 or D13, which are kept for the future features). With no data, instead
-  of `No data`, the needle shows the minutes (0–60%, 1% per minute; or
-  the whole scale).
-  - **LCD and lighting stay off** (the backlight LED fades with hours of
-    use): a short press shows the time for 10 s, like today with the screen
-    off.
+- **Clock:** ZS-042 module (DS3231 + AT24C32, CR2032 cell) on I2C: VCC,
+  GND, SDA → A4, SCL → A5 (the other pins are unused). On the bench
+  2026-10-08: clock mode, `gauge.py` setting the time and parking, and the
+  parked position surviving a USB unplug (no homing) work; the
+  screen-asleep rule below is untested. With no data the needle
+  shows the minutes (0–60%, 1% per minute) and the LCD the time and date
+  (`     14:37` / ` Thu 08/10/2026`). Without the module (or with its time
+  invalid) everything works as before (`No data`, needle at 0%).
+  - **Not while the computer's screen sleeps:** `gauge.py` then keeps sending
+    `B0` (every 5 s) and the needle parks at 0% with the LCD off, as before.
+    `B0` counts for 15 s after the last line received, so if the script
+    dies or the PC turns off while asleep, the clock shows after 15 s.
+  - **The text stays on, only the light turns off** a minute after the last
+    data (the backlight LED fades with hours of use; in daylight it reads
+    without light). A short press lights it for 10 s.
+  - The RTC keeps **UTC**. `gauge.py` sends the time every 5 s
+    (`Z<UTC seconds> <standard offset, minutes> <0/1>`); the firmware applies
+    it once the needle is still, only if it differs by more than 1 s. Never
+    set by hand.
+  - **Summer time with the EU rule** (last Sunday of March and of October,
+    01:00 UTC), computed by the firmware, so it changes even with the PC off.
+    The zone (standard offset + whether it has summer time) goes to the
+    EEPROM at address 8, written only when it changes. Calendar maths
+    checked against Python's `zoneinfo` (Europe/Lisbon) from 2000 to 2100.
+  - **The parked position goes to the DS3231's alarm 1 registers** (4 bytes,
+    battery-backed, no write limit) instead of the EEPROM: the needle now
+    moves every minute, and 2 EEPROM writes per minute would wear it out in
+    weeks. Without the module, the EEPROM as before. At boot, the RTC record
+    first, then the EEPROM.
+  - I2C (~1 ms per read) only while the needle is still, every 0.25 s.
+    `Wire.setWireTimeout` so a bad bus never hangs the loop.
+  - **The ZS-042 charges the cell** through a 200 Ω resistor (`201`) and a
+    diode: with a CR2032 (not rechargeable) **remove the `201` resistor**.
   - **Power is the real limit:** with the PC off most motherboards cut USB
     5V, and the Arduino goes off with it. The coin cell only keeps the RTC
     counting. Works while the PC is on without the script, asleep, or off
     with USB power kept on (BIOS "USB power in S5" / ErP off; check by
     charging a phone with the PC off). Otherwise a separate 5 V supply.
-  - `gauge.py` sets the time on every connection: never set by hand.
-  - The RTC keeps the date too (leap years included), but **no RTC chip
-    handles summer/winter time**; the module may not either (to confirm).
-    Simplest: the RTC keeps UTC and the firmware applies the EU rule (last
-    Sunday of March and of October, at 01:00 UTC). Otherwise the hour is
-    only fixed on the next connection to the PC.
-  - Cheap DS3231 boards (ZS-042) charge the cell through a resistor + diode:
-    with a non-rechargeable CR2032 remove them, or use an LIR2032.
-  - Fits together with the Pomodoro: separate pins (A4/A5 vs D11/D13).
-    Firmware today (2026-10-08): 10.5 KB of 30 KB flash, 535 of 2048 bytes
-    of RAM; Wire + an RTC library add roughly 3–5 KB and ~250 bytes.
+  - Firmware with the clock: 16.5 KB of 30 KB flash, 833 of 2048 bytes of
+    RAM (before: 10.5 KB and 535 bytes). The DS3231's temperature (±3 °C,
+    0x11–0x12) would be cheap to add; left out for now.
 - **Margins on the scale:** 0% = 12 half-steps above the end stop
   (`POS_MIN = 12`), 100% = 12 below the other (`POS_MAX = 278`). They can go
   down to 4–6 if the scale needs it; less than that and the needle hits.
@@ -147,6 +163,7 @@ RAM usage, driven by an Arduino over serial.
 | `G<0-7><16 hex>` | 5×8 custom character, top row first; in text use `chr(n)`, except slot 0, which is `chr(8)` (byte 0 would end the line). Don't use `8 + n` for the others: 10 and 13 are `\n` and `\r` (every 5 s) |
 | `B<0-255>` | lighting brightness (PWM on D10); `0` turns the LCD off (every 5 s) |
 | `P` | park; the Arduino replies `PARKED` |
+| `Z<UTC seconds> <offset> <0/1>` | time for the clock module: UTC, standard offset in minutes, whether the zone has (EU) summer time (every 5 s) |
 
 Everything that isn't a reading goes into a queue and is sent **one line per
 reading** (≤ ~32 bytes every 50 ms). The Arduino's receive buffer is only 64
@@ -215,15 +232,18 @@ nil. Alternative not done: resend only on receiving `READY`.
   the start of a homing. Read only at boot.
 - Uses `update`: in practice only `MAGIC` gets rewritten (2 writes per
   park/move cycle, ~100,000 per byte → more than 10 years).
+- With the clock module the parked record goes to the RTC instead (see
+  Clock). Address 8: the time zone from `gauge.py` (4 bytes).
 
 ## Final version electronics
 
 Full wiring diagram: [docs/wiring.svg](docs/wiring.svg)
 (regenerate with `python3 docs/wiring.py docs/wiring.svg`).
 Perfboard layout: [docs/perfboard.svg](docs/perfboard.svg) (`docs/perfboard.py`,
-which also checks that no traces cross and every net is connected). On the
-board the motor's coil B goes to channel A and coil A to channel B; the
-motor pads are labelled by the bench-test wire, so the firmware is unchanged.
+which also checks that no traces cross and every net is connected). Driver
+module chip side up, on headers like the Nano. The motor pads are labelled
+by the bench-test wire (B1 = the one on D8, etc.), so the firmware is
+unchanged.
 
 ### Pin map (Nano)
 | Pin | Function |
@@ -237,7 +257,7 @@ motor pads are labelled by the bench-test wire, so the firmware is unchanged.
 | D10 | lighting: LCD + needle + scale (PWM, via transistor) |
 | D11 | Pomodoro button (future) |
 | D13 | piezo (future; `tone()` doesn't interfere with PWM on D10) |
-| A4, A5 | RTC clock, I2C SDA/SCL (future) |
+| A4, A5 | RTC clock (DS3231), I2C SDA/SCL |
 | A6, A7 | free (analog input only) |
 | D0, D1 | **don't use**: they're serial/USB |
 
@@ -436,7 +456,8 @@ LEDs, multimeter, flux, desoldering braid.
    `HOME_PHASE`; repeat the self-test with the lighting at maximum.
 10. ✅ Screen sleeping on the Mac works (2026-10-06): needle parks, LCD and
     lighting off.
-11. Later: Pomodoro, clock (RTC), warning lights, temperature (`°` = the LCD's 0xDF).
+11. Clock: test the screen-asleep rule; remove the module's `201` resistor.
+    Later: Pomodoro, warning lights, temperature (`°` = the LCD's 0xDF).
     Temperature: only Linux has a generic way (`psutil.sensors_temperatures()`).
     On the M1 Mac (MacBook Air, fanless) only through a private API, without
     sudo, via `ctypes` (like Stats/macmon): fragile across chips and macOS

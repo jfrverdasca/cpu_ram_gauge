@@ -4,7 +4,8 @@
 Each reading is "C45.3 R72.1". The LCD text is composed here and sent as
 "T<row><needle><text>": row 0 or 1, for when the needle shows CPU (C) or RAM (R).
 Custom LCD characters are sent as "G<slot><8 rows in hex>", the backlight as
-"B<0-255>". Change lcd_rows() and GLYPHS to show something else.
+"B<0-255>". Change lcd_rows() and GLYPHS to show something else. The time for the
+Arduino's clock module goes as "Z<UTC seconds> <standard offset, minutes> <0/1>".
 
 While the computer's screen is asleep (macOS and Linux) it parks the needle and
 turns the LCD off.
@@ -258,6 +259,12 @@ def glyph_lines():
         yield f"G{slot}{bits}\n"
 
 
+def clock_line():
+    """UTC time and the local zone, for the clock shown with no data. The Arduino
+    applies summer time with the EU rule when the zone has it."""
+    return f"Z{int(time.time())} {-time.timezone // 60} {time.daylight}\n"
+
+
 def text_lines(rows):
     # ASCII only: the LCD has no accents
     for key, text in rows.items():
@@ -337,6 +344,7 @@ def main():
                         if not awake:
                             net.last = None  # the next reading would span the sleep
                     queue.append(f"B{BRIGHTNESS if awake else 0}\n")
+                    queue.append(clock_line())
                     if awake:
                         app_cpu, top_ram = top_apps()
                         # Just after waking, each app's CPU spans the sleep: keep the

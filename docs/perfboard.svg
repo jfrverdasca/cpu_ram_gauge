@@ -995,19 +995,18 @@
 <polyline points="395.0,500.0 373.0,500.0 373.0,522.0 197.0,522.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="351.0,478.0 351.0,522.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="263.0,500.0 263.0,522.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="395.0,500.0 439.0,500.0 439.0,632.0 703.0,632.0 703.0,302.0 835.0,302.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="703.0,302.0 681.0,302.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="703.0,324.0 835.0,324.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="703.0,368.0 681.0,368.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="703.0,434.0 681.0,434.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="835.0,302.0 879.0,302.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="835.0,302.0 835.0,258.0 725.0,258.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="395.0,500.0 439.0,500.0 439.0,632.0 703.0,632.0 703.0,324.0 681.0,324.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="703.0,390.0 681.0,390.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="703.0,434.0 835.0,434.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="681.0,456.0 879.0,456.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="681.0,324.0 659.0,324.0 659.0,258.0 791.0,258.0" fill="none" stroke="#c2410c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="395.0,544.0 175.0,544.0 175.0,302.0 197.0,302.0 351.0,302.0 351.0,280.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="175.0,434.0 307.0,434.0 307.0,456.0 351.0,456.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="263.0,434.0 263.0,456.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="395.0,544.0 417.0,544.0 417.0,654.0 923.0,654.0 923.0,148.0 549.0,148.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="835.0,654.0 835.0,456.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="923.0,324.0 857.0,324.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="923.0,412.0 835.0,412.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="857.0,412.0 857.0,434.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="879.0,412.0 879.0,434.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="549.0,170.0 549.0,148.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="681.0,192.0 681.0,148.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="527.0,500.0 593.0,500.0 593.0,434.0" fill="none" stroke="#334155" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
@@ -1019,14 +1018,14 @@
 <polyline points="527.0,368.0 417.0,368.0 417.0,236.0 175.0,236.0 175.0,258.0 197.0,258.0" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="527.0,258.0 527.0,214.0 153.0,214.0 153.0,280.0 197.0,280.0" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="263.0,478.0 197.0,478.0" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="527.0,324.0 681.0,324.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="527.0,346.0 681.0,346.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="527.0,478.0 505.0,478.0 505.0,588.0 637.0,588.0 637.0,390.0 681.0,390.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="527.0,456.0 483.0,456.0 483.0,610.0 659.0,610.0 659.0,412.0 681.0,412.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="527.0,324.0 615.0,324.0 615.0,346.0 681.0,346.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="527.0,346.0 593.0,346.0 593.0,368.0 681.0,368.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="527.0,478.0 505.0,478.0 505.0,588.0 637.0,588.0 637.0,412.0 681.0,412.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="527.0,456.0 483.0,456.0 483.0,610.0 659.0,610.0 659.0,434.0 681.0,434.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="835.0,324.0 879.0,324.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+<polyline points="835.0,346.0 879.0,346.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="835.0,368.0 879.0,368.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="835.0,390.0 879.0,390.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="835.0,412.0 879.0,412.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
-<polyline points="835.0,434.0 879.0,434.0" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="527.0,390.0 549.0,390.0" fill="none" stroke="#059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="527.0,412.0 549.0,412.0" fill="none" stroke="#059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
 <polyline points="571.0,390.0 593.0,390.0" fill="none" stroke="#059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
@@ -1074,22 +1073,22 @@
 <text x="517.0" y="570.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">TX1</text>
 <text x="461.0" y="412.0" font-size="12" text-anchor="middle" fill="white" font-weight="bold">Arduino</text>
 <text x="461.0" y="429.6" font-size="12" text-anchor="middle" fill="white" font-weight="bold">Nano</text>
-<text x="691.0" y="306.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">PWMA</text>
-<text x="825.0" y="306.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">VM</text>
-<text x="691.0" y="328.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">AIN2</text>
-<text x="825.0" y="328.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">VCC</text>
-<text x="691.0" y="350.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">AIN1</text>
-<text x="825.0" y="350.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">GND</text>
-<text x="691.0" y="372.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">STBY</text>
-<text x="825.0" y="372.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">AO1</text>
-<text x="691.0" y="394.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">BIN1</text>
-<text x="825.0" y="394.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">AO2</text>
-<text x="691.0" y="416.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">BIN2</text>
-<text x="825.0" y="416.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">BO2</text>
-<text x="691.0" y="438.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">PWMB</text>
-<text x="825.0" y="438.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">BO1</text>
-<text x="691.0" y="460.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">GND</text>
-<text x="825.0" y="460.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">GND</text>
+<text x="691.0" y="306.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">GND</text>
+<text x="825.0" y="306.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">GND</text>
+<text x="691.0" y="328.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">PWMB</text>
+<text x="825.0" y="328.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">BO1</text>
+<text x="691.0" y="350.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">BIN2</text>
+<text x="825.0" y="350.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">BO2</text>
+<text x="691.0" y="372.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">BIN1</text>
+<text x="825.0" y="372.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">AO2</text>
+<text x="691.0" y="394.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">STBY</text>
+<text x="825.0" y="394.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">AO1</text>
+<text x="691.0" y="416.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">AIN1</text>
+<text x="825.0" y="416.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">GND</text>
+<text x="691.0" y="438.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">AIN2</text>
+<text x="825.0" y="438.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">VCC</text>
+<text x="691.0" y="460.0" font-size="9" text-anchor="start" fill="white" font-weight="normal">PWMA</text>
+<text x="825.0" y="460.0" font-size="9" text-anchor="end" fill="white" font-weight="normal">VM</text>
 <text x="758.0" y="379.0" font-size="11" text-anchor="middle" fill="white" font-weight="bold">TB6612FNG</text>
 <rect x="432.0" y="628.0" width="14" height="30.0" rx="6" fill="#f59e0b" stroke="#92400e" stroke-width="1.5"/>
 <text x="439.0" y="672.0" font-size="9" text-anchor="middle" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">104</text>
@@ -1097,14 +1096,14 @@
 <line x1="468.0" y1="657.0" x2="498.0" y2="657.0" stroke="#e5e7eb" stroke-width="3"/>
 <text x="483.0" y="636.0" font-size="12" text-anchor="middle" fill="white" font-weight="bold">+</text>
 <text x="483.0" y="673.0" font-size="9" text-anchor="middle" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">100µ</text>
-<text x="863.6" y="281.8" font-size="9" text-anchor="middle" fill="#111827" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">104</text>
-<rect x="850.0" y="298.0" width="14" height="30.0" rx="6" fill="#f59e0b" stroke="#92400e" stroke-width="1.5"/>
-<text x="857.0" y="342.0" font-size="9" text-anchor="middle" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke"></text>
-<text x="907.6" y="281.8" font-size="9" text-anchor="middle" fill="#111827" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">100µ</text>
-<circle cx="879.0" cy="313.0" r="18.0" fill="#1e40af" stroke="#0f172a" stroke-width="1.5"/>
-<line x1="864.0" y1="327.0" x2="894.0" y2="327.0" stroke="#e5e7eb" stroke-width="3"/>
-<text x="879.0" y="306.0" font-size="12" text-anchor="middle" fill="white" font-weight="bold">+</text>
-<text x="879.0" y="343.0" font-size="9" text-anchor="middle" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke"></text>
+<text x="863.6" y="484.2" font-size="9" text-anchor="middle" fill="#111827" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">104</text>
+<rect x="850.0" y="430.0" width="14" height="30.0" rx="6" fill="#f59e0b" stroke="#92400e" stroke-width="1.5"/>
+<text x="857.0" y="474.0" font-size="9" text-anchor="middle" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke"></text>
+<text x="907.6" y="484.2" font-size="9" text-anchor="middle" fill="#111827" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">100µ</text>
+<circle cx="879.0" cy="445.0" r="18.0" fill="#1e40af" stroke="#0f172a" stroke-width="1.5"/>
+<line x1="864.0" y1="431.0" x2="894.0" y2="431.0" stroke="#e5e7eb" stroke-width="3"/>
+<text x="879.0" y="460.0" font-size="12" text-anchor="middle" fill="white" font-weight="bold">+</text>
+<text x="879.0" y="475.0" font-size="9" text-anchor="middle" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke"></text>
 <rect x="212.0" y="518.0" width="14" height="30.0" rx="6" fill="#f59e0b" stroke="#92400e" stroke-width="1.5"/>
 <text x="219.0" y="562.0" font-size="9" text-anchor="middle" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">104</text>
 <circle cx="329.0" cy="533.0" r="18.0" fill="#1e40af" stroke="#0f172a" stroke-width="1.5"/>
@@ -1152,14 +1151,14 @@
 <text x="187.0" y="482.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">3 V0</text>
 <rect x="191.0" y="516.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
 <text x="187.0" y="526.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">2 VDD</text>
+<rect x="873.0" y="318.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
+<text x="889.0" y="328.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B1</text>
+<rect x="873.0" y="340.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
+<text x="889.0" y="350.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B2</text>
 <rect x="873.0" y="362.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="889.0" y="372.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B1</text>
+<text x="889.0" y="372.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A2</text>
 <rect x="873.0" y="384.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="889.0" y="394.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B2</text>
-<rect x="873.0" y="406.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="889.0" y="416.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A2</text>
-<rect x="873.0" y="428.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="889.0" y="438.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A1</text>
+<text x="889.0" y="394.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A1</text>
 <rect x="719.0" y="230.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
 <rect x="719.0" y="252.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
 <rect x="741.0" y="230.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
@@ -1199,7 +1198,7 @@
 <text x="769.0" y="223.5" font-size="10" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">3</text>
 <text x="791.0" y="223.5" font-size="10" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">4</text>
 <text x="197.0" y="204.8" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">LCD</text>
-<text x="887.8" y="356.6" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">motor</text>
+<text x="887.8" y="312.6" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">motor</text>
 <text x="758.0" y="204.8" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">lighting</text>
 <text x="628.2" y="376.4" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">warnings</text>
 <text x="562.2" y="486.4" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">button</text>
@@ -2202,19 +2201,18 @@
 <polyline points="681.0,1162.0 703.0,1162.0 703.0,1184.0 879.0,1184.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="725.0,1140.0 725.0,1184.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="813.0,1162.0 813.0,1184.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="681.0,1162.0 637.0,1162.0 637.0,1294.0 373.0,1294.0 373.0,964.0 241.0,964.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="373.0,964.0 395.0,964.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="373.0,986.0 241.0,986.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="373.0,1030.0 395.0,1030.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="373.0,1096.0 395.0,1096.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="241.0,964.0 197.0,964.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="241.0,964.0 241.0,920.0 351.0,920.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="681.0,1162.0 637.0,1162.0 637.0,1294.0 373.0,1294.0 373.0,986.0 395.0,986.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="373.0,1052.0 395.0,1052.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="373.0,1096.0 241.0,1096.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="395.0,1118.0 197.0,1118.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="395.0,986.0 417.0,986.0 417.0,920.0 285.0,920.0" fill="none" stroke="#c2410c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="681.0,1206.0 901.0,1206.0 901.0,964.0 879.0,964.0 725.0,964.0 725.0,942.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="901.0,1096.0 769.0,1096.0 769.0,1118.0 725.0,1118.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="813.0,1096.0 813.0,1118.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="681.0,1206.0 659.0,1206.0 659.0,1316.0 153.0,1316.0 153.0,810.0 527.0,810.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="241.0,1316.0 241.0,1118.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="153.0,986.0 219.0,986.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="153.0,1074.0 241.0,1074.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="219.0,1074.0 219.0,1096.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="197.0,1074.0 197.0,1096.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="527.0,832.0 527.0,810.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="395.0,854.0 395.0,810.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="549.0,1162.0 483.0,1162.0 483.0,1096.0" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
@@ -2226,14 +2224,14 @@
 <polyline points="549.0,1030.0 659.0,1030.0 659.0,898.0 901.0,898.0 901.0,920.0 879.0,920.0" fill="none" stroke="#7c3aed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="549.0,920.0 549.0,876.0 923.0,876.0 923.0,942.0 879.0,942.0" fill="none" stroke="#7c3aed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="813.0,1140.0 879.0,1140.0" fill="none" stroke="#7c3aed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="549.0,986.0 395.0,986.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="549.0,1008.0 395.0,1008.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="549.0,1140.0 571.0,1140.0 571.0,1250.0 439.0,1250.0 439.0,1052.0 395.0,1052.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="549.0,1118.0 593.0,1118.0 593.0,1272.0 417.0,1272.0 417.0,1074.0 395.0,1074.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="549.0,986.0 461.0,986.0 461.0,1008.0 395.0,1008.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="549.0,1008.0 483.0,1008.0 483.0,1030.0 395.0,1030.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="549.0,1140.0 571.0,1140.0 571.0,1250.0 439.0,1250.0 439.0,1074.0 395.0,1074.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="549.0,1118.0 593.0,1118.0 593.0,1272.0 417.0,1272.0 417.0,1096.0 395.0,1096.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="241.0,986.0 197.0,986.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polyline points="241.0,1008.0 197.0,1008.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="241.0,1030.0 197.0,1030.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="241.0,1052.0 197.0,1052.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="241.0,1074.0 197.0,1074.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
-<polyline points="241.0,1096.0 197.0,1096.0" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="549.0,1052.0 527.0,1052.0" fill="none" stroke="#059669" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="549.0,1074.0 527.0,1074.0" fill="none" stroke="#059669" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
 <polyline points="505.0,1052.0 483.0,1052.0" fill="none" stroke="#059669" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
@@ -2296,10 +2294,10 @@
 <circle cx="637.0" cy="1316.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="593.0" cy="1294.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="593.0" cy="1316.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
-<circle cx="219.0" cy="964.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
-<circle cx="219.0" cy="986.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
-<circle cx="197.0" cy="964.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
-<circle cx="197.0" cy="986.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
+<circle cx="219.0" cy="1118.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
+<circle cx="219.0" cy="1096.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
+<circle cx="197.0" cy="1118.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
+<circle cx="197.0" cy="1096.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="857.0" cy="1184.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="857.0" cy="1206.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="747.0" cy="1184.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
@@ -2328,10 +2326,10 @@
 <circle cx="879.0" cy="1096.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="879.0" cy="1140.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="879.0" cy="1184.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
+<circle cx="197.0" cy="986.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
+<circle cx="197.0" cy="1008.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="197.0" cy="1030.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="197.0" cy="1052.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
-<circle cx="197.0" cy="1074.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
-<circle cx="197.0" cy="1096.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="351.0" cy="898.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="351.0" cy="920.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
 <circle cx="329.0" cy="898.0" r="5" fill="#d1d5db" stroke="#6b7280" stroke-width="1.2"/>
@@ -2373,14 +2371,14 @@
 <text x="889.0" y="1144.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">3 V0</text>
 <rect x="873.0" y="1178.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
 <text x="889.0" y="1188.0" font-size="10" text-anchor="start" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">2 VDD</text>
+<rect x="191.0" y="980.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
+<text x="187.0" y="990.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B1</text>
+<rect x="191.0" y="1002.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
+<text x="187.0" y="1012.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B2</text>
 <rect x="191.0" y="1024.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="187.0" y="1034.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B1</text>
+<text x="187.0" y="1034.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A2</text>
 <rect x="191.0" y="1046.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="187.0" y="1056.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">B2</text>
-<rect x="191.0" y="1068.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="187.0" y="1078.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A2</text>
-<rect x="191.0" y="1090.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
-<text x="187.0" y="1100.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A1</text>
+<text x="187.0" y="1056.0" font-size="10" text-anchor="end" fill="#111827" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">A1</text>
 <rect x="345.0" y="892.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
 <rect x="345.0" y="914.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
 <rect x="323.0" y="892.0" width="12" height="12" fill="#fde68a" stroke="#92400e" stroke-width="1.5"/>
@@ -2420,7 +2418,7 @@
 <text x="307.0" y="885.5" font-size="10" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">3</text>
 <text x="285.0" y="885.5" font-size="10" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">4</text>
 <text x="879.0" y="866.8" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">LCD</text>
-<text x="188.2" y="1018.6" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">motor</text>
+<text x="188.2" y="974.6" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">motor</text>
 <text x="318.0" y="866.8" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">lighting</text>
 <text x="447.8" y="1038.4" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">warnings</text>
 <text x="513.8" y="1148.4" font-size="11" text-anchor="middle" fill="#92400e" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">button</text>
@@ -2434,13 +2432,13 @@
 <text x="615.0" y="889.2" font-size="10" text-anchor="middle" fill="#475569" font-weight="normal" stroke="white" stroke-width="3" paint-order="stroke">USB end</text>
 <text x="30.0" y="1399.0" font-size="14" text-anchor="start" fill="#111827" font-weight="bold">Before soldering</text>
 <text x="42.0" y="1419.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Nano pins assumed as on its silkscreen (D13 next to the USB on one side, D12 on the other). Check yours.</text>
-<text x="42.0" y="1437.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Driver: common TB6612FNG module, rows 7 holes apart, PWMA and VM at the same end. Measure yours; if different, change DRV_GAP and run the script again.</text>
+<text x="42.0" y="1437.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Driver: common TB6612FNG module, rows 7 holes apart, chip side up, GND at the top of both rows. Measure yours; if different, change DRV_GAP and run the script again.</text>
 <text x="42.0" y="1455.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Nano on female headers. Module GND pins are joined on the module, so one is enough here.</text>
 <text x="30.0" y="1481.0" font-size="14" text-anchor="start" fill="#111827" font-weight="bold">Off-board wires (yellow pads)</text>
 <text x="42.0" y="1501.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• LCD: the pin number on each pad. Pins 15 (A) and 16 (K) go to lighting pair 1.</text>
 <text x="42.0" y="1519.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Lighting: top row − (transistor), bottom row + (5V). 1 LCD backlight, 2 scale, 3 needle, 4 spare.</text>
 <text x="42.0" y="1537.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Each LED with its own 150 Ω, soldered at the LED.</text>
-<text x="42.0" y="1555.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Motor: B1/B2/A1/A2 = the wire that was on D8/D9/D2/D3 in the bench test. Coil B on channel A.</text>
+<text x="42.0" y="1555.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Motor: B1/B2/A1/A2 = the wire that was on D8/D9/D2/D3 in the bench test.</text>
 <text x="42.0" y="1573.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Warnings: LED + to D5/D6 (330 Ω on the board), − to GND. Button: D4 and GND.</text>
 <text x="42.0" y="1591.0" font-size="12" text-anchor="start" fill="#1f2937" font-weight="normal">• Future: Pomodoro button (D11), piezo (D13), RTC (A4 SDA, A5 SCL).</text>
 <text x="30.0" y="1617.0" font-size="14" text-anchor="start" fill="#111827" font-weight="bold">Then</text>

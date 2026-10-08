@@ -9,6 +9,8 @@ serial to an Arduino, which drives the needle's stepper motor and a 16×2 LCD.
   network speed (download or upload, whichever is faster).
 - Parks the needle at 0% and turns the LCD off when the computer's screen
   sleeps or the script stops.
+- **Clock (optional DS3231 module):** with no data the needle shows the
+  minutes and the LCD the time and date; the script keeps it set.
 
 ## Hardware
 
