@@ -37,7 +37,7 @@ BAUD = 115200
 INTERVAL = 0.05    # seconds between readings
 ALPHA = 0.04       # CPU smoothing: s = s*0.96 + new*0.04 (~1.2 s time constant)
 RESET_WAIT = 2.5   # the Arduino resets when the port opens and may home
-APPS_INTERVAL = 5     # seconds between top app scans (a scan costs ~30 ms of CPU)
+APPS_INTERVAL = 5     # seconds between top app scans (a scan costs ~15 ms of CPU)
 TEXT_INTERVAL = 0.25  # seconds between LCD text updates
 NET_INTERVAL = 1      # seconds between network speed readings (~70 us each)
 SCROLL_STEP = 0.5     # seconds per character when an app name doesn't fit (2 text updates)

@@ -84,6 +84,11 @@ RAM usage, driven by an Arduino over serial.
     with USB power kept on (BIOS "USB power in S5" / ErP off; check by
     charging a phone with the PC off). Otherwise a separate 5 V supply.
   - `gauge.py` sets the time on every connection: never set by hand.
+  - The RTC keeps the date too (leap years included), but **no RTC chip
+    handles summer/winter time**; the module may not either (to confirm).
+    Simplest: the RTC keeps UTC and the firmware applies the EU rule (last
+    Sunday of March and of October, at 01:00 UTC). Otherwise the hour is
+    only fixed on the next connection to the PC.
   - Cheap DS3231 boards (ZS-042) charge the cell through a resistor + diode:
     with a non-rechargeable CR2032 remove them, or use an LIR2032.
   - Fits together with the Pomodoro: separate pins (A4/A5 vs D11/D13).
@@ -173,9 +178,13 @@ nil. Alternative not done: resend only on receiving `READY`.
 - **Top apps:** summed per app ("Helper" processes count towards the app).
   Without root, ~270 system processes are left out; they're remembered and
   skipped on later scans. The script itself is left out (with the PC idle it
-  always showed `Python`). Scan every 5 s, ~28 ms of CPU (previously ~44 ms
-  every 3 s). The whole script used ~2.2% of one core (≈0.3% of the PC with
-  8 cores); the 20 Hz loop alone is ~0.3%. Moving RAM to its own interval
+  always showed `Python`). Scan every 5 s, ~14 ms of CPU (earlier
+  measurements: ~28 ms; ~44 ms every 3 s before that).
+  **Whole script, measured 2026-10-08** (30 s of the real loop, fake serial
+  port): ~1.1% of one core (≈0.14% of the PC with 8 cores; ~2.2% in an
+  earlier measurement). Per second: top apps ~2.8 ms, CPU + RAM readings
+  ~0.13 ms, network ~0.07 ms, interface check ~0.04 ms, LCD text ~0.02 ms;
+  the rest is waking up 20×/s and the serial writes. Moving RAM to its own interval
   isn't worth it: on macOS it comes from the same call as CPU.
 - **Network:** counts only the interface that internet traffic goes through,
   chosen by route (a UDP `connect` to `1.1.1.1` sends nothing) and not by
