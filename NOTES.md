@@ -63,6 +63,12 @@ RAM usage, driven by an Arduino over serial.
   (and full light) as a lamp test.
 - **The LCD replaces the mode lights:** it shows the metric the needle isn't
   showing; when toggling, it shows for 3 s which one is on the needle.
+  - **Row 1 is contextual** (2026-10-09): uptime and network normally; with
+    the needle's metric (system total) above 60%, the app using the most of
+    it and that app's own share, in the same layout as row 0 (`C 38% Code`),
+    until it drops below 50%.
+    The app's name is noise at low usage; the threshold is on the total
+    because a single app rarely reaches 60% of RAM.
 - **Warning lights** (the cluster's pink bulb holders) become real warnings,
   normally off: sustained CPU > 90%, end of a Pomodoro phase, etc. 5 V LEDs;
   the original bulbs (~12 V / 1.2 W) would need a 12 V supply. Beware of
