@@ -165,7 +165,7 @@ void updateMotor() {
 void fullHoming() {
   clearParked();
   applyPhase();
-  delay(SETTLE_MS);
+  delay(SETTLE_MS);             // same settle as before any move
   for (int i = 0; i < TRAVEL + 10; i++) {
     phase = (phase + 7) % 8;
     applyPhase();
