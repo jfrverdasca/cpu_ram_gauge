@@ -74,7 +74,7 @@ RAM usage, driven by an Arduino over serial.
   GND, SDA → A4, SCL → A5 (the other pins are unused). On the bench
   2026-10-08: clock mode, `gauge.py` setting the time and parking, and the
   parked position surviving a USB unplug (no homing) work; the
-  screen-asleep rule below is untested. With no data the needle
+  screen-asleep rule below was tested on 2026-10-09. With no data the needle
   shows the minutes (0–60%, 1% per minute) and the LCD the time and date
   (`     14:37` / ` Thu 08/10/2026`). Without the module (or with its time
   invalid) everything works as before (`No data`, needle at 0%).
@@ -82,6 +82,12 @@ RAM usage, driven by an Arduino over serial.
     `B0` (every 5 s) and the needle parks at 0% with the LCD off, as before.
     `B0` counts for 15 s after the last line received, so if the script
     dies or the PC turns off while asleep, the clock shows after 15 s.
+  - **On the Mac the clock shows about a minute after the screen sleeps**
+    (tested 2026-10-09): the Mac goes to idle sleep ~65 s after the display
+    turns off (`pmset` `sleep 1`), the script stops with it, and 15 s of
+    silence look like the PC being off. Kept on purpose: the alternative
+    (`B0` holding until the script says it is leaving) would leave the gauge
+    dark if the script died without saying so.
   - **The text stays on, only the light turns off** a minute after the last
     data (the backlight LED fades with hours of use; in daylight it reads
     without light). A short press lights it for 10 s.
@@ -457,7 +463,7 @@ LEDs, multimeter, flux, desoldering braid.
    `HOME_PHASE`; repeat the self-test with the lighting at maximum.
 10. ✅ Screen sleeping on the Mac works (2026-10-06): needle parks, LCD and
     lighting off.
-11. Clock: test the screen-asleep rule; remove the module's `201` resistor.
+11. Clock: remove the module's `201` resistor.
     Later: Pomodoro, warning lights, temperature (`°` = the LCD's 0xDF).
     Temperature: only Linux has a generic way (`psutil.sensors_temperatures()`).
     On the M1 Mac (MacBook Air, fanless) only through a private API, without
