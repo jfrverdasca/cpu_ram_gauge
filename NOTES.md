@@ -71,6 +71,12 @@ RAM usage, driven by an Arduino over serial.
     because a single app rarely reaches 60% of RAM.
     - RAM higher because macOS sits at 60-70% used on a normal day (62% at
       rest on 2026-10-09): at 60% the row never left the app.
+    - **Apps scanned every 1 s while high** (CPU or RAM past its threshold;
+      either, since the Arduino picks the needle), and at once when one
+      crosses it. At 5 s the row switched with the name from before the rise
+      (VS Code with 8 `yes` loading the CPU), and a new process reads 0% on
+      its first scan, so it took up to ~10 s. Now ~1.5 s: the first scan
+      after the rise still shows the old app, the next one the new process.
 - **Warning lights** (the cluster's pink bulb holders) become real warnings,
   normally off: sustained CPU > 90%, end of a Pomodoro phase, etc. 5 V LEDs;
   the original bulbs (~12 V / 1.2 W) would need a 12 V supply. Beware of
