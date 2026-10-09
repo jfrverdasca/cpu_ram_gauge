@@ -66,7 +66,12 @@ RAM usage, driven by an Arduino over serial.
   - **Row 1 is contextual** (2026-10-09): uptime and network normally; with
     the needle's metric (system total) above 60% CPU / 80% RAM, the app using
     the most of it and that app's own share, in the same layout as row 0
-    (`C 38% Code`), until it drops below 50% CPU / 75% RAM.
+    (`▣ 38% Code`), until it drops below 50% CPU / 75% RAM.
+    The icon is an app window (2026-10-10), not the metric's: with the same
+    layout on both rows, a metric icon on both made the PC's total and the
+    app's share easy to mix up. The metric is known (the needle's). Tried an
+    app grid (four 2×2 blocks) too: nicer, but the window reads better on
+    the LCD. Try the grid again once it's mounted in the case.
     The app's name is noise at low usage; the threshold is on the total
     because a single app rarely reaches 60% of RAM.
     - RAM higher because macOS sits at 60-70% used on a normal day (62% at
