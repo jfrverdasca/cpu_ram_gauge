@@ -356,6 +356,7 @@ def main():
     next_apps = next_scan = next_text = next_net = 0
     awake = True
     high = False  # CPU or RAM past HOT
+    stale_cpu = False  # the next scan's CPU figures can't be trusted: show no app
     top_cpu = top_ram = ("", 0)  # if it starts with the screen asleep
     net = Network()
     # Lines other than readings, sent one per reading: the Arduino's serial buffer
@@ -378,10 +379,14 @@ def main():
                 ram = psutil.virtual_memory().percent
                 now = time.monotonic()
 
-                was_high = high
+                was_high, was_cpu_high = high, _hot["C"]
                 high = hot("C", cpu) | hot("R", ram)  # | and not "or": update both
                 if high and not was_high:
                     next_scan = now  # the last scan is from before the rise
+                # A process's first scan reads 0% CPU: whatever started the rise may
+                # be new, and only shows on the scan after
+                if _hot["C"] and not was_cpu_high:
+                    stale_cpu = True
 
                 # Every few seconds, also resent in case the Arduino missed them
                 woke = False
@@ -400,16 +405,18 @@ def main():
                         queue.append("P\n")
                     next_apps = now + APPS_INTERVAL
 
-                # Faster while high: a process's first scan reads 0% CPU, so a new
-                # one only shows on the next. Just after waking, each app's CPU
-                # spans the sleep: show none until the next scan, 1 s later
+                # Faster while high, so the app keeps up. Just after waking, each
+                # app's CPU spans the sleep. With stale CPU figures, show no app
+                # (uptime and network) until the next scan, 1 s later
+                stale_cpu |= woke
                 if awake and (woke or now >= next_scan):
                     app_cpu, top_ram = top_apps()
-                    top_cpu = ("", 0) if woke else app_cpu
+                    top_cpu = ("", 0) if stale_cpu else app_cpu
                     if args.verbose:
                         print(f"Top CPU {top_cpu[0]} {top_cpu[1]:.0f}%  "
                               f"Top RAM {top_ram[0]} {top_ram[1]:.0f}%")
-                    next_scan = now + (HOT_APPS_INTERVAL if woke or high else APPS_INTERVAL)
+                    next_scan = now + (HOT_APPS_INTERVAL if stale_cpu or high else APPS_INTERVAL)
+                    stale_cpu = False
 
                 if awake:
                     s.write(f"C{cpu:.1f} R{ram:.1f}\n".encode())
