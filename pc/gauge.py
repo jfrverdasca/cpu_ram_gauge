@@ -44,6 +44,8 @@ NET_INTERVAL = 1      # seconds between network speed readings (~70 us each)
 SCROLL_STEP = 0.5     # seconds per character when an app name doesn't fit (2 text updates)
 SCROLL_PAUSE = 2      # seconds still at each end
 LCD_WIDTH = 16
+HOT_ON = 60           # needle metric %, from which row 1 shows the app using the most
+HOT_OFF = 50          # ... until it drops below this, so the row doesn't flicker
 BRIGHTNESS = 255      # LCD backlight, 1-255
 
 # Custom 5x8 LCD characters, top row first. In text, slot n is chr(n), except slot 0,
@@ -128,11 +130,14 @@ def park(s):
 
 
 _denied = set()  # system processes need root: skip them on later scans
+_cores = psutil.cpu_count() or 1  # None when it can't tell
+_ram_total = psutil.virtual_memory().total
 
 
 def top_apps():
-    """Names of the apps using the most CPU and RAM, leaving out this script.
-    Helper processes ("Google Chrome Helper (Renderer)") count towards their app."""
+    """(name, % of the total) of the apps using the most CPU and RAM, leaving out
+    this script. Helper processes ("Google Chrome Helper (Renderer)") count towards
+    their app."""
     cpu, ram = defaultdict(float), defaultdict(int)
     denied = set()
     for p in psutil.process_iter():
@@ -156,7 +161,11 @@ def top_apps():
         ram[name] += m
     _denied.clear()  # forget the ones that ended
     _denied.update(denied)
-    return max(cpu, key=cpu.get, default=""), max(ram, key=ram.get, default="")
+    top_cpu = max(cpu, key=cpu.get, default="")
+    top_ram = max(ram, key=ram.get, default="")
+    # A process's CPU % is of one core (0-800% with 8): scale it to the whole machine
+    return ((top_cpu, cpu.get(top_cpu, 0) / _cores),
+            (top_ram, ram.get(top_ram, 0) / _ram_total * 100))
 
 
 def scroll(text, width):
@@ -174,6 +183,14 @@ def metric_row(icon, value, app):
     # "C 5% Code", "C 72% Code": low values leave more room for the name
     row = f"{icon} {value:.0f}% "
     return row + scroll(app, LCD_WIDTH - len(row))
+
+
+_hot = {"C": False, "R": False}  # needle metric above HOT_ON, until below HOT_OFF
+
+
+def hot(needle, value):
+    _hot[needle] = value >= (HOT_OFF if _hot[needle] else HOT_ON)
+    return _hot[needle]
 
 
 def uptime():
@@ -244,15 +261,21 @@ class Network:
 
 
 def lcd_rows(cpu, ram, top_cpu, top_ram, net):
-    """LCD text by "<row><needle>". The first row shows the metric the needle isn't."""
+    """LCD text by "<row><needle>". The first row shows the metric the needle isn't;
+    the second, uptime and network, or the app behind the needle and its own share
+    while the needle is high. top_cpu and top_ram are (name, % of the total)."""
     # "⏻ 03:26h   ↓1.2M": the faster of download/upload right-aligned
     left = f"{UPTIME_ICON} {uptime()}"
     bottom = left + net.text().rjust(LCD_WIDTH - len(left))
+    # An app's share can't pass the total: summed RSS counts shared pages once per
+    # process, and the share is from the last scan, up to APPS_INTERVAL ago
+    top_cpu = top_cpu[0], min(top_cpu[1], cpu)
+    top_ram = top_ram[0], min(top_ram[1], ram)
     return {
-        "0C": metric_row(RAM_ICON, ram, top_ram),
-        "0R": metric_row(CPU_ICON, cpu, top_cpu),
-        "1C": bottom,
-        "1R": bottom,
+        "0C": metric_row(RAM_ICON, ram, top_ram[0]),
+        "0R": metric_row(CPU_ICON, cpu, top_cpu[0]),
+        "1C": metric_row(CPU_ICON, top_cpu[1], top_cpu[0]) if hot("C", cpu) and top_cpu[0] else bottom,
+        "1R": metric_row(RAM_ICON, top_ram[1], top_ram[0]) if hot("R", ram) and top_ram[0] else bottom,
     }
 
 
@@ -316,7 +339,7 @@ def main():
     cpu = psutil.cpu_percent()
     next_apps = next_text = next_net = 0
     awake = True
-    top_cpu = top_ram = ""  # if it starts with the screen asleep
+    top_cpu = top_ram = ("", 0)  # if it starts with the screen asleep
     net = Network()
     # Lines other than readings, sent one per reading: the Arduino's serial buffer
     # holds 64 bytes and it stops reading for ~10 ms while it redraws the LCD
@@ -357,7 +380,8 @@ def main():
                         net.find_interface()  # Wi-Fi and cable may swap
                         queue.extend(glyph_lines())
                         if args.verbose:
-                            print(f"Top CPU {top_cpu}  Top RAM {top_ram}")
+                            print(f"Top CPU {top_cpu[0]} {top_cpu[1]:.0f}%  "
+                                  f"Top RAM {top_ram[0]} {top_ram[1]:.0f}%")
                     else:
                         queue.append("P\n")
                     next_apps = now + (1 if woke else APPS_INTERVAL)
