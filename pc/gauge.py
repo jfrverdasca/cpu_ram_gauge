@@ -46,7 +46,7 @@ SCROLL_PAUSE = 2      # seconds still at each end
 LCD_WIDTH = 16
 HOT_ON = 60           # needle metric %, from which row 1 shows the app using the most
 HOT_OFF = 50          # ... until it drops below this, so the row doesn't flicker
-BRIGHTNESS = 255      # LCD backlight, 1-255
+BRIGHTNESS = 128      # LCD backlight, 1-255
 
 # Custom 5x8 LCD characters, top row first. In text, slot n is chr(n), except slot 0,
 # which is chr(8): code 0 would end the line on the Arduino, and the LCD repeats
