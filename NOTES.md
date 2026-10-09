@@ -193,6 +193,13 @@ arrive. When everything was sent at once (~94 bytes every 0.25 s), bytes were
 lost and lines got glued together (garbled text, and a `T` line missing its
 start could be read as `C0 R0`).
 
+`gauge.py` opens the port **exclusively** (2026-10-09). macOS lets two programs
+open the same port, and during the bench tests a test script and `gauge.py`
+both wrote readings: the needle swung between the two values. A second
+`gauge.py` now gets "Could not exclusively lock port" and retries every 2 s.
+The lock is advisory (`flock`): the Arduino IDE's Serial Monitor or any program
+that doesn't ask for it can still open the port.
+
 `G`, `B` and the text are resent even without changes: if the Arduino resets
 with the port open (reset button, brownout), the PC doesn't notice and the LCD
 loses its glyphs. The firmware ignores identical glyphs, so the cost is almost

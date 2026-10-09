@@ -107,7 +107,10 @@ def find_port():
 
 
 def connect(port):
-    s = serial.Serial(port, BAUD, timeout=0.1, write_timeout=1)
+    # Exclusive: macOS and Linux let a second program open the port, and the Arduino
+    # then gets both streams of readings. A second gauge.py waits instead (the lock
+    # is advisory: programs that don't ask for it can still open the port).
+    s = serial.Serial(port, BAUD, timeout=0.1, write_timeout=1, exclusive=True)
     time.sleep(RESET_WAIT)
     s.reset_input_buffer()
     print(f"Connected to {port}")
