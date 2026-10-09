@@ -227,7 +227,12 @@ nil. Alternative not done: resend only on receiving `READY`.
   scroll doesn't work: it shifts both rows together.
   The Arduino only picks the variant; `Needle: ...`, `No data` and
   `Homing...` come from the Arduino.
-- **Top apps:** summed per app ("Helper" processes count towards the app).
+- **Top apps:** summed per app. On macOS a process counts towards the
+  outermost `.app` bundle of its executable (2026-10-10): Firefox's
+  `plugin-container`, Chrome's and VS Code's helpers. Outside a bundle, the
+  command name: Claude Code's binary is named after its version (`2.1.295`)
+  and shows as `claude`. Elsewhere, the process name. The app's name is
+  the bundle's, so VS Code shows as `Visual Studio Code` (scrolls).
   Without root, ~270 system processes are left out; they're remembered and
   skipped on later scans. The script itself is left out (with the PC idle it
   always showed `Python`). Scan every 5 s, ~14 ms of CPU (earlier

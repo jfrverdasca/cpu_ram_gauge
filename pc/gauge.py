@@ -21,6 +21,7 @@ import ctypes
 import ctypes.util
 import glob
 import os
+import re
 import shutil
 import signal
 import socket
@@ -135,10 +136,23 @@ _cores = psutil.cpu_count() or 1  # None when it can't tell
 _ram_total = psutil.virtual_memory().total
 
 
+def app_name(p):
+    """The app a process belongs to. On macOS, the outermost .app bundle, so helper
+    and content processes ("plugin-container" inside Firefox.app) count towards
+    their app; outside a bundle, the command it was started as ("claude", not its
+    binary named after the version)."""
+    if sys.platform != "darwin":
+        return p.name()
+    bundle = re.search(r"/([^/]+)\.app/", p.exe())
+    if bundle:
+        return bundle.group(1)
+    cmd = p.cmdline()
+    return os.path.basename(cmd[0]) if cmd else p.name()
+
+
 def top_apps():
     """(name, % of the total) of the apps using the most CPU and RAM, leaving out
-    this script. Helper processes ("Google Chrome Helper (Renderer)") count towards
-    their app."""
+    this script. A process counts towards its app (app_name())."""
     cpu, ram = defaultdict(float), defaultdict(int)
     denied = set()
     for p in psutil.process_iter():
@@ -149,7 +163,7 @@ def top_apps():
             continue
         try:
             with p.oneshot():
-                name, c, m = p.name(), p.cpu_percent(), p.memory_info().rss
+                name, c, m = app_name(p), p.cpu_percent(), p.memory_info().rss
         except psutil.AccessDenied:
             denied.add(p)
             continue
@@ -157,7 +171,6 @@ def top_apps():
             continue
         if not name:
             continue
-        name = name.split(" Helper")[0]
         cpu[name] += c
         ram[name] += m
     _denied.clear()  # forget the ones that ended
@@ -375,10 +388,9 @@ def main():
                     queue.append(clock_line())
                     if awake:
                         app_cpu, top_ram = top_apps()
-                        # Just after waking, each app's CPU spans the sleep: keep the
-                        # old name and scan again in a second
-                        if not woke:
-                            top_cpu = app_cpu
+                        # Just after waking, each app's CPU spans the sleep: show no
+                        # app and scan again in a second
+                        top_cpu = ("", 0) if woke else app_cpu
                         net.find_interface()  # Wi-Fi and cable may swap
                         queue.extend(glyph_lines())
                         if args.verbose:
