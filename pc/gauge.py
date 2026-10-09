@@ -40,6 +40,7 @@ INTERVAL = 0.05    # seconds between readings
 ALPHA = 0.04       # CPU smoothing: s = s*0.96 + new*0.04 (~1.2 s time constant)
 RESET_WAIT = 2.5   # the Arduino resets when the port opens and may home
 APPS_INTERVAL = 5     # seconds between top app scans (a scan costs ~15 ms of CPU)
+HOT_APPS_INTERVAL = 1 # ... while CPU or RAM is past HOT, so the app on row 1 keeps up
 TEXT_INTERVAL = 0.25  # seconds between LCD text updates
 NET_INTERVAL = 1      # seconds between network speed readings (~70 us each)
 SCROLL_STEP = 0.5     # seconds per character when an app name doesn't fit (2 text updates)
@@ -289,8 +290,8 @@ def lcd_rows(cpu, ram, top_cpu, top_ram, net):
     return {
         "0C": metric_row(RAM_ICON, ram, top_ram[0]),
         "0R": metric_row(CPU_ICON, cpu, top_cpu[0]),
-        "1C": metric_row(CPU_ICON, top_cpu[1], top_cpu[0]) if hot("C", cpu) and top_cpu[0] else bottom,
-        "1R": metric_row(RAM_ICON, top_ram[1], top_ram[0]) if hot("R", ram) and top_ram[0] else bottom,
+        "1C": metric_row(CPU_ICON, top_cpu[1], top_cpu[0]) if _hot["C"] and top_cpu[0] else bottom,
+        "1R": metric_row(RAM_ICON, top_ram[1], top_ram[0]) if _hot["R"] and top_ram[0] else bottom,
     }
 
 
@@ -352,8 +353,9 @@ def main():
     top_apps()            # same for each process
     time.sleep(INTERVAL)
     cpu = psutil.cpu_percent()
-    next_apps = next_text = next_net = 0
+    next_apps = next_scan = next_text = next_net = 0
     awake = True
+    high = False  # CPU or RAM past HOT
     top_cpu = top_ram = ("", 0)  # if it starts with the screen asleep
     net = Network()
     # Lines other than readings, sent one per reading: the Arduino's serial buffer
@@ -369,16 +371,21 @@ def main():
                     if not port:
                         raise serial.SerialException("Arduino not found")
                     s = connect(port)
-                    next_apps = next_text = 0
+                    next_apps = next_scan = next_text = 0
                     queue.clear()
 
                 cpu = cpu * (1 - ALPHA) + psutil.cpu_percent() * ALPHA
                 ram = psutil.virtual_memory().percent
+                now = time.monotonic()
+
+                was_high = high
+                high = hot("C", cpu) | hot("R", ram)  # | and not "or": update both
+                if high and not was_high:
+                    next_scan = now  # the last scan is from before the rise
 
                 # Every few seconds, also resent in case the Arduino missed them
-                now = time.monotonic()
+                woke = False
                 if now >= next_apps:
-                    woke = False
                     if display_on() != awake:
                         awake = woke = not awake
                         print("Screen on." if awake else "Screen asleep: parking.")
@@ -387,18 +394,22 @@ def main():
                     queue.append(f"B{BRIGHTNESS if awake else 0}\n")
                     queue.append(clock_line())
                     if awake:
-                        app_cpu, top_ram = top_apps()
-                        # Just after waking, each app's CPU spans the sleep: show no
-                        # app and scan again in a second
-                        top_cpu = ("", 0) if woke else app_cpu
                         net.find_interface()  # Wi-Fi and cable may swap
                         queue.extend(glyph_lines())
-                        if args.verbose:
-                            print(f"Top CPU {top_cpu[0]} {top_cpu[1]:.0f}%  "
-                                  f"Top RAM {top_ram[0]} {top_ram[1]:.0f}%")
                     else:
                         queue.append("P\n")
-                    next_apps = now + (1 if woke else APPS_INTERVAL)
+                    next_apps = now + APPS_INTERVAL
+
+                # Faster while high: a process's first scan reads 0% CPU, so a new
+                # one only shows on the next. Just after waking, each app's CPU
+                # spans the sleep: show none until the next scan, 1 s later
+                if awake and (woke or now >= next_scan):
+                    app_cpu, top_ram = top_apps()
+                    top_cpu = ("", 0) if woke else app_cpu
+                    if args.verbose:
+                        print(f"Top CPU {top_cpu[0]} {top_cpu[1]:.0f}%  "
+                              f"Top RAM {top_ram[0]} {top_ram[1]:.0f}%")
+                    next_scan = now + (HOT_APPS_INTERVAL if woke or high else APPS_INTERVAL)
 
                 if awake:
                     s.write(f"C{cpu:.1f} R{ram:.1f}\n".encode())
