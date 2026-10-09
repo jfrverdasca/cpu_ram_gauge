@@ -44,8 +44,9 @@ NET_INTERVAL = 1      # seconds between network speed readings (~70 us each)
 SCROLL_STEP = 0.5     # seconds per character when an app name doesn't fit (2 text updates)
 SCROLL_PAUSE = 2      # seconds still at each end
 LCD_WIDTH = 16
-HOT_ON = 60           # needle metric %, from which row 1 shows the app using the most
-HOT_OFF = 50          # ... until it drops below this, so the row doesn't flicker
+# Needle metric % from which row 1 shows the app using the most of it, and below
+# which it goes back, so the row doesn't flicker. RAM higher: macOS sits at 60-70%.
+HOT = {"C": (60, 50), "R": (80, 75)}
 BRIGHTNESS = 128      # LCD backlight, 1-255
 
 # Custom 5x8 LCD characters, top row first. In text, slot n is chr(n), except slot 0,
@@ -185,11 +186,12 @@ def metric_row(icon, value, app):
     return row + scroll(app, LCD_WIDTH - len(row))
 
 
-_hot = {"C": False, "R": False}  # needle metric above HOT_ON, until below HOT_OFF
+_hot = {"C": False, "R": False}  # needle metric past HOT, until back below it
 
 
 def hot(needle, value):
-    _hot[needle] = value >= (HOT_OFF if _hot[needle] else HOT_ON)
+    on, off = HOT[needle]
+    _hot[needle] = value >= (off if _hot[needle] else on)
     return _hot[needle]
 
 
