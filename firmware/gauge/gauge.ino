@@ -58,7 +58,10 @@ const uint8_t DEAD_ZONE = 2;
 
 const unsigned long DATA_TIMEOUT_MS = 5000;
 const unsigned long RELEASE_MS = 100;     // de-energize coils once stopped
-const unsigned long SETTLE_MS = 20;       // hold the current phase before a move starts
+// Hold the current phase this long before a move starts: from rest the rotor needs
+// it to settle, and right after a stop it is still ringing. Starting during the ringing
+// loses steps (going down most): a target falling ~5 steps every 50 ms lost dozens.
+const unsigned long SETTLE_MS = 60;
 const unsigned long DEBOUNCE_MS = 50;
 const unsigned long LONG_PRESS_MS = 1000;
 const unsigned long LCD_REFRESH_MS = 250;
@@ -79,7 +82,7 @@ int pos = 0, target = 0;
 int8_t dir = 0;
 uint8_t speed = 0, phase = 0;
 bool energized = false;
-unsigned long lastStepUs = 0, stoppedMs = 0;
+unsigned long lastStepUs = 0, stoppedMs = 0;   // stoppedMs: still on the current phase since
 
 bool showRam = false;
 float cpu = 0, ram = 0;
@@ -129,11 +132,14 @@ void updateMotor() {
       if (energized && millis() - stoppedMs > RELEASE_MS) setCoils(0, 0);
       return;
     }
+    if (!energized) {           // let the rotor settle on the current phase first
+      applyPhase();
+      stoppedMs = millis();
+    }
+    if (millis() - stoppedMs < SETTLE_MS) return;
     if (parked) clearParked();
     dir = target > pos ? 1 : -1;
     speed = 0;
-    applyPhase();               // let the rotor settle on the current phase first
-    delay(SETTLE_MS);
     lastStepUs = micros();
     return;
   }
