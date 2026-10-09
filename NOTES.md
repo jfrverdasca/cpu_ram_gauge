@@ -145,10 +145,23 @@ RAM usage, driven by an Arduino over serial.
   Full sweep in ≈ 0.6 s. +300 against the end stop makes the needle jump:
   only during homing, slowly.
 - **Before each move, the rotor has to settle:** energize the current phase
-  and wait 20 ms (`SETTLE_MS`). Without this, the self-test and the homing
+  and wait (`SETTLE_MS`). Without this, the self-test and the homing
   couldn't go down from the top. With the wait, going down got to 3 ms per
   step and homing to 5 ms. Self-test, 100% load and parking on timeout
   tested and working.
+- **The wait also counts from the last stop: 60 ms** (2026-10-09; it was a
+  fixed 20 ms `delay()` on each start). A heavy Spotlight search left the
+  needle well above zero (up to ~90° with another motor of the same model):
+  steps lost going down. Reproduced with a steady ramp (10% → 80% → 10%):
+  at 1% per reading (~19 ms/step) and 4% (~5 ms/step) it stayed exact, at
+  **2% per reading (~9 ms/step, like the CPU falling after a search)** it
+  lost dozens of steps every run. At that rate each reading moves the target
+  ~5 steps: 20 ms wait, 5 quick steps, stop, and the next start falls while
+  the rotor is still ringing from the stop. With 60 ms since the last stop:
+  exact. The wait doesn't block (serial and LCD keep running) and costs
+  nothing after a longer pause. Then 3 heavy Spotlight searches (needle near 100%):
+  back at zero every time. That other motor is the one mounted now: its
+  `HOME_PHASE` is still the old motor's (recalibrate, to-do 6).
 - **`HOME_PHASE = 6`** (2026-10-03, direct drive, 3 identical measurements;
   `MAGIC` changed to `0xA9`). With this, homing always ends in the same
   place, even after pulling the plug.
@@ -174,8 +187,8 @@ RAM usage, driven by an Arduino over serial.
 
 Everything that isn't a reading goes into a queue and is sent **one line per
 reading** (≤ ~32 bytes every 50 ms). The Arduino's receive buffer is only 64
-bytes and the firmware stops reading for up to 20 ms (`delay(SETTLE_MS)` when
-starting the motor) or ~7–10 ms (LCD redraw); at 115200 baud ~11.5 bytes/ms
+bytes and the firmware stops reading for ~7–10 ms (LCD redraw; until
+2026-10-09 also 20 ms when starting the motor); at 115200 baud ~11.5 bytes/ms
 arrive. When everything was sent at once (~94 bytes every 0.25 s), bytes were
 lost and lines got glued together (garbled text, and a `T` line missing its
 start could be read as `C0 R0`).

@@ -316,7 +316,7 @@ def main():
     top_cpu = top_ram = ""  # if it starts with the screen asleep
     net = Network()
     # Lines other than readings, sent one per reading: the Arduino's serial buffer
-    # holds 64 bytes and it stops reading for up to 20 ms when the needle starts moving
+    # holds 64 bytes and it stops reading for ~10 ms while it redraws the LCD
     queue = deque()
 
     s = None
