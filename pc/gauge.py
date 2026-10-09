@@ -95,12 +95,21 @@ GLYPHS = [
      "..#..",
      "..#..",
      "....."],
+    [".....",
+     "#####",   # 5: app window, for an app's own share (the others are the PC's total)
+     "#####",
+     "#...#",
+     "#...#",
+     "#...#",
+     "#####",
+     "....."],
 ]
 CPU_ICON = chr(8)  # or "C" for a plain letter
 RAM_ICON = chr(1)  # or "R"
 UPTIME_ICON = chr(2)
 DOWN_ICON = chr(3)
 UP_ICON = chr(4)
+APP_ICON = chr(5)
 
 # Arduino, Arduino.org, CH340, FTDI, CP210x
 KNOWN_VIDS = {0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4}
@@ -290,8 +299,8 @@ def lcd_rows(cpu, ram, top_cpu, top_ram, net):
     return {
         "0C": metric_row(RAM_ICON, ram, top_ram[0]),
         "0R": metric_row(CPU_ICON, cpu, top_cpu[0]),
-        "1C": metric_row(CPU_ICON, top_cpu[1], top_cpu[0]) if _hot["C"] and top_cpu[0] else bottom,
-        "1R": metric_row(RAM_ICON, top_ram[1], top_ram[0]) if _hot["R"] and top_ram[0] else bottom,
+        "1C": metric_row(APP_ICON, top_cpu[1], top_cpu[0]) if _hot["C"] and top_cpu[0] else bottom,
+        "1R": metric_row(APP_ICON, top_ram[1], top_ram[0]) if _hot["R"] and top_ram[0] else bottom,
     }
 
 
