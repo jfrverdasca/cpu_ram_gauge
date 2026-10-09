@@ -161,7 +161,7 @@ RAM usage, driven by an Arduino over serial.
   exact. The wait doesn't block (serial and LCD keep running) and costs
   nothing after a longer pause. Then 3 heavy Spotlight searches (needle near 100%):
   back at zero every time. That other motor is the one mounted now: its
-  `HOME_PHASE` is still the old motor's (recalibrate, to-do 6).
+  `HOME_PHASE` is still the old motor's (to-do 13).
 - **`HOME_PHASE = 6`** (2026-10-03, direct drive, 3 identical measurements;
   `MAGIC` changed to `0xA9`). With this, homing always ends in the same
   place, even after pulling the plug.
@@ -489,3 +489,6 @@ LEDs, multimeter, flux, desoldering braid.
     sessions under load and see where it parks. If it drops from session to
     session, it loses steps going up: go up slower (`MIN_UP_US`) or
     TB6612FNG.
+13. Recalibrate `HOME_PHASE` for the motor mounted on 2026-10-09 (same
+    model, swapped for the bench tests), with the procedure in 6. Until then
+    a homing can end up to 4 half-steps above the stop.
