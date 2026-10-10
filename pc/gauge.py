@@ -209,13 +209,11 @@ def metric_row(icon, value, app):
     return row + scroll(app, LCD_WIDTH - len(row))
 
 
-_hot = {"C": False, "R": False}  # needle metric past HOT, until back below it
-
-
-def hot(needle, value):
+def hot(needle, value, was):
+    """Whether the needle's metric is past HOT: on from its first value, off below
+    the second."""
     on, off = HOT[needle]
-    _hot[needle] = value >= (off if _hot[needle] else on)
-    return _hot[needle]
+    return value >= (off if was else on)
 
 
 def uptime():
@@ -285,10 +283,10 @@ class Network:
         return DOWN_ICON + rate(self.down)
 
 
-def lcd_rows(cpu, ram, top_cpu, top_ram, net):
+def lcd_rows(cpu, ram, top_cpu, top_ram, net, cpu_app, ram_app):
     """LCD text by "<row><needle>". The first row shows the metric the needle isn't;
-    the second, uptime and network, or the app behind the needle and its own share
-    while the needle is high. top_cpu and top_ram are (name, % of the total)."""
+    the second, uptime and network, or with cpu_app / ram_app the app behind the
+    needle and its own share. top_cpu and top_ram are (name, % of the total)."""
     # "⏻ 03:26h   ↓1.2M": the faster of download/upload right-aligned
     left = f"{UPTIME_ICON} {uptime()}"
     bottom = left + net.text().rjust(LCD_WIDTH - len(left))
@@ -299,8 +297,8 @@ def lcd_rows(cpu, ram, top_cpu, top_ram, net):
     return {
         "0C": metric_row(RAM_ICON, ram, top_ram[0]),
         "0R": metric_row(CPU_ICON, cpu, top_cpu[0]),
-        "1C": metric_row(APP_ICON, top_cpu[1], top_cpu[0]) if _hot["C"] and top_cpu[0] else bottom,
-        "1R": metric_row(APP_ICON, top_ram[1], top_ram[0]) if _hot["R"] and top_ram[0] else bottom,
+        "1C": metric_row(APP_ICON, top_cpu[1], top_cpu[0]) if cpu_app and top_cpu[0] else bottom,
+        "1R": metric_row(APP_ICON, top_ram[1], top_ram[0]) if ram_app and top_ram[0] else bottom,
     }
 
 
@@ -364,8 +362,9 @@ def main():
     cpu = psutil.cpu_percent()
     next_apps = next_scan = next_text = next_net = 0
     awake = True
-    high = False  # CPU or RAM past HOT
-    stale_cpu = False  # the next scan's CPU figures can't be trusted: show no app
+    hot_cpu = hot_ram = False  # past HOT
+    stale_cpu = False  # the next scan's CPU figures can't be trusted
+    fresh_cpu = False  # top_cpu is from a scan with real CPU figures
     top_cpu = top_ram = ("", 0)  # if it starts with the screen asleep
     net = Network()
     # Lines other than readings, sent one per reading: the Arduino's serial buffer
@@ -388,13 +387,14 @@ def main():
                 ram = psutil.virtual_memory().percent
                 now = time.monotonic()
 
-                was_high, was_cpu_high = high, _hot["C"]
-                high = hot("C", cpu) | hot("R", ram)  # | and not "or": update both
+                was_high, was_cpu_hot = hot_cpu or hot_ram, hot_cpu
+                hot_cpu, hot_ram = hot("C", cpu, hot_cpu), hot("R", ram, hot_ram)
+                high = hot_cpu or hot_ram
                 if high and not was_high:
                     next_scan = now  # the last scan is from before the rise
                 # A process's first scan reads 0% CPU: whatever started the rise may
                 # be new, and only shows on the scan after
-                if _hot["C"] and not was_cpu_high:
+                if hot_cpu and not was_cpu_hot:
                     stale_cpu = True
 
                 # Every few seconds, also resent in case the Arduino missed them
@@ -415,12 +415,15 @@ def main():
                     next_apps = now + APPS_INTERVAL
 
                 # Faster while high, so the app keeps up. Just after waking, each
-                # app's CPU spans the sleep. With stale CPU figures, show no app
-                # (uptime and network) until the next scan, 1 s later
+                # app's CPU spans the sleep. With stale CPU figures, keep the last
+                # app on row 0 and none on row 1 (uptime and network) until the
+                # next scan, 1 s later
                 stale_cpu |= woke
                 if awake and (woke or now >= next_scan):
                     app_cpu, top_ram = top_apps()
-                    top_cpu = ("", 0) if stale_cpu else app_cpu
+                    if not stale_cpu:
+                        top_cpu = app_cpu
+                    fresh_cpu = not stale_cpu
                     if args.verbose:
                         print(f"Top CPU {top_cpu[0]} {top_cpu[1]:.0f}%  "
                               f"Top RAM {top_ram[0]} {top_ram[1]:.0f}%")
@@ -438,7 +441,8 @@ def main():
                         # Text still queued is out of date: drop it, or a slow loop
                         # lets the queue grow forever
                         queue = deque(line for line in queue if line[0] != "T")
-                        queue.extend(text_lines(lcd_rows(cpu, ram, top_cpu, top_ram, net)))
+                        queue.extend(text_lines(lcd_rows(cpu, ram, top_cpu, top_ram, net,
+                                                             hot_cpu and fresh_cpu, hot_ram)))
                         next_text = now + TEXT_INTERVAL
                 if queue:
                     s.write(queue.popleft().encode())
