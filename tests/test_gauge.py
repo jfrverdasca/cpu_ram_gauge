@@ -18,9 +18,12 @@ CPU, RAM = 20.0, 60.0
 class FakeSerial:
     """Answers like the Arduino. events: (seconds after opening, line) to receive."""
 
-    def __init__(self, ready=b"READY 2", events=(), park_answer=b"PARKED", duration=1.0):
+    def __init__(self, ready=b"READY 2", events=(), park_answer=b"PARKED", duration=1.0,
+                 drop_at=None):
         self.start = time.monotonic()
+        self.ready = ready
         self.boot = [ready + b"\n"] if ready else []
+        self.drop_at = drop_at  # the USB drops then; the Arduino restarts on reconnecting
         self.events = sorted(events)
         self.park_answer = park_answer
         self.duration = duration
@@ -33,6 +36,10 @@ class FakeSerial:
     def in_waiting(self):
         if self.elapsed() > self.duration:
             raise KeyboardInterrupt  # ends main(), which then parks
+        if self.drop_at is not None and self.elapsed() > self.drop_at:
+            self.drop_at = None
+            self.boot = [self.ready + b"\n"]
+            raise gauge.serial.SerialException("device disconnected")
         return sum(len(line) for t, line in self.events if t <= self.elapsed())
 
     def read(self, n):
@@ -206,6 +213,15 @@ class Main(unittest.TestCase):
         self.assertIn("T0", [line[:2] for line in after])  # rows resent at once
         self.assertIn("T1", [line[:2] for line in after])
         self.assertTrue([t for t in scans if t > 3.0])
+
+    def test_reconnecting_ends_the_pomodoro(self):
+        # The Arduino restarts when the port opens again, which ends its Pomodoro
+        port = FakeSerial(events=[(0.5, b"POMODORO ON\n")], drop_at=1.0, duration=4.5)
+        output = run_main(port)
+        self.assertIn("device disconnected", output)
+        after = port.lines(3.0)
+        self.assertGreater(sum(line.startswith("N") for line in after), 10)  # 20 a second
+        self.assertIn("T0", [line[:2] for line in after])
 
     def test_exit_parks(self):
         self.assertIn("Parked.", run_main(FakeSerial(duration=0.3)))

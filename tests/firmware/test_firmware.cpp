@@ -335,6 +335,15 @@ TEST(lamp_test_goes_back_to_the_pomodoro) {
   CHECK(abs(pos - pomoPos()) <= 1);
 }
 
+TEST(fewer_cycles_mid_pomodoro_clamp_the_cycle) {
+  startPomodoro("M5 1 1 4");
+  pomoCycle = 4;
+  send("M5 1 1 2");
+  run(1500);
+  CHECK(pomoCycle == 2);
+  CHECK(lcd.text(0).rfind("Focus 2/2", 0) == 0);
+}
+
 // ---------------------------------------------------------------- settings
 
 TEST(settings_are_clamped_and_saved) {

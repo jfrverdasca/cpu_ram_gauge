@@ -448,6 +448,7 @@ def main():
                     rx = b""
                     queue.clear()
                     restarted = True
+                    pomodoro = False  # connect() read the READY: a reset ends it
 
                 lines, rx = read_lines(s, rx)
                 for line in lines:
