@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Send CPU and RAM usage to the Arduino needle gauge over serial.
+"""Drive the Arduino needle gauge over serial: CPU or RAM usage on the needle.
 
-Each reading is "C45.3 R72.1". The LCD text is composed here and sent as
-"T<row><needle><text>": row 0 or 1, for when the needle shows CPU (C) or RAM (R).
-Custom LCD characters are sent as "G<slot><8 rows in hex>", the backlight as
-"B<0-255>". Change lcd_rows() and GLYPHS to show something else. The time for the
-Arduino's clock module goes as "Z<UTC seconds> <standard offset, minutes> <0/1>".
+The Arduino is only the physical part; this script decides what it shows. The needle
+goes as "N45.3" every reading (also the sign the script is alive), the LCD rows as
+"T<row><text>" when they change. Custom LCD characters are sent as "G<slot><8 rows
+in hex>", the backlight as "B<0-255>", the Pomodoro minutes as "M<focus> <break>
+<long break> <cycles>", the piezo as "S<Hz> <volume>" and the time for the Arduino's
+clock module as "Z<UTC seconds> <standard offset, minutes> <0/1>": on connecting and
+whenever the Arduino says READY (it restarted). A click on the Arduino's button
+("CLICK") switches the needle to the next of MODES. Change lcd_rows() and GLYPHS to
+show something else.
 
 While the computer's screen is asleep (macOS and Linux) it parks the needle and
 turns the LCD off.
@@ -35,21 +39,29 @@ import psutil
 import serial
 from serial.tools import list_ports
 
-BAUD = 115200
-INTERVAL = 0.05    # seconds between readings
-ALPHA = 0.04       # CPU smoothing: s = s*0.96 + new*0.04 (~1.2 s time constant)
-RESET_WAIT = 2.5   # the Arduino resets when the port opens and may home
-APPS_INTERVAL = 5     # seconds between top app scans (a scan costs ~15 ms of CPU)
-HOT_APPS_INTERVAL = 1 # ... while CPU or RAM is past HOT, so the app on row 1 keeps up
-TEXT_INTERVAL = 0.25  # seconds between LCD text updates
-NET_INTERVAL = 1      # seconds between network speed readings (~70 us each)
-SCROLL_STEP = 0.5     # seconds per character when an app name doesn't fit (2 text updates)
-SCROLL_PAUSE = 2      # seconds still at each end
-LCD_WIDTH = 16
+# ---------------------------------------------------------------- settings
+# Safe to change.
+
+BRIGHTNESS = 128      # LCD backlight, 1-255
+MODES = ["C", "R"]    # what the needle shows, in click order: C = CPU, R = RAM
+NOTICE = 3            # seconds "Needle: RAM" stays on row 0 after a click
+ALPHA = 0.04          # CPU smoothing: s = s*0.96 + new*0.04 (~1.2 s time constant)
 # Needle metric % from which row 1 shows the app using the most of it, and below
 # which it goes back, so the row doesn't flicker. RAM higher: macOS sits at 60-70%.
 HOT = {"C": (60, 50), "R": (80, 75)}
-BRIGHTNESS = 128      # LCD backlight, 1-255
+APPS_INTERVAL = 5     # seconds between top app scans (a scan costs ~15 ms of CPU)
+HOT_APPS_INTERVAL = 1 # ... while CPU or RAM is past HOT, so the app on row 1 keeps up
+NET_INTERVAL = 1      # seconds between network speed readings (~70 us each)
+SCROLL_STEP = 0.5     # seconds per character when an app name doesn't fit (2 text updates)
+SCROLL_PAUSE = 2      # seconds still at each end
+
+# Pomodoro, run by the Arduino (also without this script); saved there
+POMODORO_FOCUS = 25       # minutes, 1-99
+POMODORO_BREAK = 5        # minutes, 1-99
+POMODORO_LONG_BREAK = 15  # minutes, 1-99
+POMODORO_CYCLES = 4       # focus sessions before the long break, 1-9
+BEEP_HZ = 2000            # piezo tone, 1000-5000
+BEEP_VOLUME = 50          # 0 (silent) - 100
 
 # Custom 5x8 LCD characters, top row first. In text, slot n is chr(n), except slot 0,
 # which is chr(8): code 0 would end the line on the Arduino, and the LCD repeats
@@ -111,6 +123,18 @@ DOWN_ICON = chr(3)
 UP_ICON = chr(4)
 APP_ICON = chr(5)
 
+# ---------------------------------------------------------------- internals
+
+PROTOCOL = b"2"       # what the firmware must say in READY
+BAUD = 115200
+INTERVAL = 0.05       # seconds between readings
+READY_WAIT = 10       # the Arduino resets when the port opens and may home
+CHECK_INTERVAL = 5    # seconds between screen and network interface checks
+CLOCK_INTERVAL = 3600 # seconds between clock syncs
+TEXT_INTERVAL = 0.25  # seconds between LCD text updates
+LCD_WIDTH = 16
+NAMES = {"C": "CPU", "R": "RAM"}
+
 # Arduino, Arduino.org, CH340, FTDI, CP210x
 KNOWN_VIDS = {0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4}
 
@@ -125,20 +149,42 @@ def connect(port):
     # then gets both streams of readings. A second gauge.py waits instead (the lock
     # is advisory: programs that don't ask for it can still open the port).
     s = serial.Serial(port, BAUD, timeout=0.1, write_timeout=1, exclusive=True)
-    time.sleep(RESET_WAIT)
-    s.reset_input_buffer()
+    deadline = time.monotonic() + READY_WAIT
+    while time.monotonic() < deadline:
+        line = s.readline().strip()
+        if line.startswith(b"READY"):
+            check_protocol(s, line)
+            break
+    else:
+        print("No READY from the Arduino: assuming it runs the matching firmware")
     print(f"Connected to {port}")
     return s
 
 
+def check_protocol(s, ready):
+    if ready.split()[1:] != [PROTOCOL]:
+        s.close()
+        sys.exit(f"The Arduino speaks another protocol ({ready.decode()!r}): "
+                 "upload firmware/gauge/gauge.ino")
+
+
+def read_lines(s, buf):
+    """Complete lines received so far, and the rest of buf. Never waits."""
+    buf += s.read(s.in_waiting)
+    *lines, rest = buf.split(b"\n")
+    return [line.strip() for line in lines], rest
+
+
 def park(s):
+    """The Arduino's answer: PARKED, POMODORO ON (the needle stays with it) or None."""
     s.reset_input_buffer()
     s.write(b"\nP\n")  # the newline ends a line cut short by Ctrl+C
     deadline = time.monotonic() + 3
     while time.monotonic() < deadline:
-        if s.readline().strip() == b"PARKED":
-            return True
-    return False
+        line = s.readline().strip()
+        if line in (b"PARKED", b"POMODORO ON"):
+            return line
+    return None
 
 
 _denied = set()  # system processes need root: skip them on later scans
@@ -283,10 +329,11 @@ class Network:
         return DOWN_ICON + rate(self.down)
 
 
-def lcd_rows(cpu, ram, top_cpu, top_ram, net, cpu_app, ram_app):
-    """LCD text by "<row><needle>". The first row shows the metric the needle isn't;
-    the second, uptime and network, or with cpu_app / ram_app the app behind the
-    needle and its own share. top_cpu and top_ram are (name, % of the total)."""
+def lcd_rows(mode, cpu, ram, top_cpu, top_ram, net, cpu_app, ram_app):
+    """The two LCD rows while the needle shows mode. The first row shows the metric
+    the needle isn't; the second, uptime and network, or with cpu_app / ram_app the
+    app behind the needle and its own share. top_cpu and top_ram are (name, % of
+    the total)."""
     # "⏻ 03:26h   ↓1.2M": the faster of download/upload right-aligned
     left = f"{UPTIME_ICON} {uptime()}"
     bottom = left + net.text().rjust(LCD_WIDTH - len(left))
@@ -294,12 +341,11 @@ def lcd_rows(cpu, ram, top_cpu, top_ram, net, cpu_app, ram_app):
     # process, and the share is from the last scan, up to APPS_INTERVAL ago
     top_cpu = top_cpu[0], min(top_cpu[1], cpu)
     top_ram = top_ram[0], min(top_ram[1], ram)
-    return {
-        "0C": metric_row(RAM_ICON, ram, top_ram[0]),
-        "0R": metric_row(CPU_ICON, cpu, top_cpu[0]),
-        "1C": metric_row(APP_ICON, top_cpu[1], top_cpu[0]) if cpu_app and top_cpu[0] else bottom,
-        "1R": metric_row(APP_ICON, top_ram[1], top_ram[0]) if ram_app and top_ram[0] else bottom,
-    }
+    if mode == "C":
+        return (metric_row(RAM_ICON, ram, top_ram[0]),
+                metric_row(APP_ICON, top_cpu[1], top_cpu[0]) if cpu_app and top_cpu[0] else bottom)
+    return (metric_row(CPU_ICON, cpu, top_cpu[0]),
+            metric_row(APP_ICON, top_ram[1], top_ram[0]) if ram_app and top_ram[0] else bottom)
 
 
 def glyph_lines():
@@ -314,10 +360,18 @@ def clock_line():
     return f"Z{int(time.time())} {-time.timezone // 60} {time.daylight}\n"
 
 
-def text_lines(rows):
+def text_line(row, text):
     # ASCII only: the LCD has no accents
-    for key, text in rows.items():
-        yield f"T{key}{text.encode('ascii', 'replace').decode()[:LCD_WIDTH]}\n"
+    return f"T{row}{text.encode('ascii', 'replace').decode()[:LCD_WIDTH]}\n"
+
+
+def setup_lines(awake):
+    """Everything the Arduino keeps: sent on connecting and when it restarts."""
+    yield from glyph_lines()
+    yield f"M{POMODORO_FOCUS} {POMODORO_BREAK} {POMODORO_LONG_BREAK} {POMODORO_CYCLES}\n"
+    yield f"S{BEEP_HZ} {BEEP_VOLUME}\n"
+    yield f"B{BRIGHTNESS if awake else 0}\n"
+    yield clock_line()
 
 
 if sys.platform == "darwin":
@@ -360,7 +414,9 @@ def main():
     top_apps()            # same for each process
     time.sleep(INTERVAL)
     cpu = psutil.cpu_percent()
-    next_apps = next_scan = next_text = next_net = 0
+    mode = MODES[0]
+    notice_until = 0      # "Needle: ..." on row 0 until then
+    next_check = next_scan = next_text = next_net = next_clock = 0
     awake = True
     hot_cpu = hot_ram = False  # past HOT
     stale_cpu = False  # the next scan's CPU figures can't be trusted
@@ -370,22 +426,47 @@ def main():
     # Lines other than readings, sent one per reading: the Arduino's serial buffer
     # holds 64 bytes and it stops reading for ~10 ms while it redraws the LCD
     queue = deque()
+    sent_rows = [None, None]  # LCD rows as last queued
+    rx = b""
 
     s = None
     try:
         while True:
             try:
+                now = time.monotonic()
+                restarted = False
                 if s is None:
                     port = args.port or find_port()
                     if not port:
                         raise serial.SerialException("Arduino not found")
                     s = connect(port)
-                    next_apps = next_scan = next_text = 0
+                    rx = b""
                     queue.clear()
+                    restarted = True
+
+                lines, rx = read_lines(s, rx)
+                for line in lines:
+                    if line.startswith(b"READY"):
+                        check_protocol(s, line)
+                        print("The Arduino restarted.")
+                        queue.clear()
+                        restarted = True
+                    elif line == b"CLICK" and awake:
+                        mode = MODES[(MODES.index(mode) + 1) % len(MODES)]
+                        notice_until = now + NOTICE
+                        next_text = now  # the new text at once
+                        if args.verbose:
+                            print(f"Needle: {NAMES[mode]}")
+                    elif line in (b"POMODORO ON", b"POMODORO OFF", b"TEST"):
+                        print(line.decode().capitalize())
+                if restarted:
+                    queue.extend(setup_lines(awake))
+                    sent_rows = [None, None]
+                    next_check = next_scan = next_text = 0
+                    next_clock = now + CLOCK_INTERVAL
 
                 cpu = cpu * (1 - ALPHA) + psutil.cpu_percent() * ALPHA
                 ram = psutil.virtual_memory().percent
-                now = time.monotonic()
 
                 was_high, was_cpu_hot = hot_cpu or hot_ram, hot_cpu
                 hot_cpu, hot_ram = hot("C", cpu, hot_cpu), hot("R", ram, hot_ram)
@@ -397,22 +478,22 @@ def main():
                 if hot_cpu and not was_cpu_hot:
                     stale_cpu = True
 
-                # Every few seconds, also resent in case the Arduino missed them
                 woke = False
-                if now >= next_apps:
+                if now >= next_check:
                     if display_on() != awake:
                         awake = woke = not awake
                         print("Screen on." if awake else "Screen asleep: parking.")
+                        queue.append(f"B{BRIGHTNESS}\n" if awake else "B0\nP\n")
                         if not awake:
                             net.last = None  # the next reading would span the sleep
-                    queue.append(f"B{BRIGHTNESS if awake else 0}\n")
-                    queue.append(clock_line())
+                    elif not awake:
+                        queue.append("B0\n")  # still asleep: the Arduino forgets B0 after 15 s
                     if awake:
                         net.find_interface()  # Wi-Fi and cable may swap
-                        queue.extend(glyph_lines())
-                    else:
-                        queue.append("P\n")
-                    next_apps = now + APPS_INTERVAL
+                    next_check = now + CHECK_INTERVAL
+                if now >= next_clock:
+                    queue.append(clock_line())
+                    next_clock = now + CLOCK_INTERVAL
 
                 # Faster while high, so the app keeps up. Just after waking, each
                 # app's CPU spans the sleep. With stale CPU figures, keep the last
@@ -431,18 +512,24 @@ def main():
                     stale_cpu = False
 
                 if awake:
-                    s.write(f"C{cpu:.1f} R{ram:.1f}\n".encode())
+                    value = cpu if mode == "C" else ram
+                    s.write(f"N{value:.1f}\n".encode())
                     if args.verbose:
                         print(f"CPU {cpu:5.1f}%  RAM {ram:5.1f}%")
                     if now >= next_net:
                         net.read()
                         next_net = now + NET_INTERVAL
                     if now >= next_text:
-                        # Text still queued is out of date: drop it, or a slow loop
-                        # lets the queue grow forever
-                        queue = deque(line for line in queue if line[0] != "T")
-                        queue.extend(text_lines(lcd_rows(cpu, ram, top_cpu, top_ram, net,
-                                                             hot_cpu and fresh_cpu, hot_ram)))
+                        rows = list(lcd_rows(mode, cpu, ram, top_cpu, top_ram, net,
+                                             hot_cpu and fresh_cpu, hot_ram))
+                        if now < notice_until:
+                            rows[0] = f"Needle: {NAMES[mode]}"
+                        for row, text in enumerate(rows):
+                            if text != sent_rows[row]:
+                                # A row still queued is out of date: replace it
+                                sent_rows[row] = text
+                                queue = deque(l for l in queue if not l.startswith(f"T{row}"))
+                                queue.append(text_line(row, text))
                         next_text = now + TEXT_INTERVAL
                 if queue:
                     s.write(queue.popleft().encode())
@@ -459,11 +546,13 @@ def main():
         if s is not None:
             print("Parking the needle...")
             try:
-                print("Parked." if park(s) else "No confirmation from the Arduino.")
+                answer = park(s)
+                print({b"PARKED": "Parked.",
+                       b"POMODORO ON": "Pomodoro running: the needle stays with it."}
+                      .get(answer, "No confirmation from the Arduino."))
             except serial.SerialException:
                 pass
             s.close()
-
 
 if __name__ == "__main__":
     main()
