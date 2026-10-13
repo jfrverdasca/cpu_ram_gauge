@@ -9,7 +9,8 @@ in hex>", the backlight as "B<0-255>", the Pomodoro minutes as "M<focus> <break>
 clock module as "Z<UTC seconds> <standard offset, minutes> <0/1>": on connecting and
 whenever the Arduino says READY (it restarted). A click on the Arduino's button
 ("CLICK") switches the needle to the next of MODES. Change lcd_rows() and GLYPHS to
-show something else.
+show something else. While the Arduino runs the Pomodoro ("POMODORO ON") only a
+slow needle goes, so it doesn't park when the Pomodoro ends.
 
 While the computer's screen is asleep (macOS and Linux) it parks the needle and
 turns the LCD off.
@@ -128,6 +129,9 @@ APP_ICON = chr(5)
 PROTOCOL = b"2"       # what the firmware must say in READY
 BAUD = 115200
 INTERVAL = 0.05       # seconds between readings
+# ... while the Arduino runs the Pomodoro: it ignores the needle then, which only
+# keeps it from parking when the Pomodoro ends. No apps, network or text meanwhile
+POMODORO_INTERVAL = 0.25
 READY_WAIT = 10       # the Arduino resets when the port opens and may home
 CHECK_INTERVAL = 5    # seconds between screen and network interface checks
 CLOCK_INTERVAL = 3600 # seconds between clock syncs
@@ -418,6 +422,7 @@ def main():
     notice_until = 0      # "Needle: ..." on row 0 until then
     next_check = next_scan = next_text = next_net = next_clock = 0
     awake = True
+    pomodoro = False      # the Arduino runs it: only a slow needle
     hot_cpu = hot_ram = False  # past HOT
     stale_cpu = False  # the next scan's CPU figures can't be trusted
     fresh_cpu = False  # top_cpu is from a scan with real CPU figures
@@ -451,14 +456,25 @@ def main():
                         print("The Arduino restarted.")
                         queue.clear()
                         restarted = True
+                        pomodoro = False
                     elif line == b"CLICK" and awake:
                         mode = MODES[(MODES.index(mode) + 1) % len(MODES)]
                         notice_until = now + NOTICE
                         next_text = now  # the new text at once
                         if args.verbose:
                             print(f"Needle: {NAMES[mode]}")
-                    elif line in (b"POMODORO ON", b"POMODORO OFF", b"TEST"):
+                    elif line in (b"POMODORO ON", b"POMODORO OFF"):
                         print(line.decode().capitalize())
+                        pomodoro = line == b"POMODORO ON"
+                        if not pomodoro:
+                            # Back at once. The LCD still has the text from before,
+                            # and app and network figures would span the Pomodoro
+                            sent_rows = [None, None]
+                            next_scan = next_text = now
+                            stale_cpu = True
+                            net.last = None
+                    elif line == b"TEST":
+                        print("Test")
                 if restarted:
                     queue.extend(setup_lines(awake))
                     sent_rows = [None, None]
@@ -500,7 +516,7 @@ def main():
                 # app on row 0 and none on row 1 (uptime and network) until the
                 # next scan, 1 s later
                 stale_cpu |= woke
-                if awake and (woke or now >= next_scan):
+                if awake and not pomodoro and (woke or now >= next_scan):
                     app_cpu, top_ram = top_apps()
                     if not stale_cpu:
                         top_cpu = app_cpu
@@ -516,10 +532,10 @@ def main():
                     s.write(f"N{value:.1f}\n".encode())
                     if args.verbose:
                         print(f"CPU {cpu:5.1f}%  RAM {ram:5.1f}%")
-                    if now >= next_net:
+                    if not pomodoro and now >= next_net:
                         net.read()
                         next_net = now + NET_INTERVAL
-                    if now >= next_text:
+                    if not pomodoro and now >= next_text:
                         rows = list(lcd_rows(mode, cpu, ram, top_cpu, top_ram, net,
                                              hot_cpu and fresh_cpu, hot_ram))
                         if now < notice_until:
@@ -533,7 +549,7 @@ def main():
                         next_text = now + TEXT_INTERVAL
                 if queue:
                     s.write(queue.popleft().encode())
-                time.sleep(INTERVAL)
+                time.sleep(POMODORO_INTERVAL if pomodoro else INTERVAL)
             except serial.SerialException as e:
                 print(f"{e} - retrying...")
                 if s is not None:
