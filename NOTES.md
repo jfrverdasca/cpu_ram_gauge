@@ -60,7 +60,8 @@ RAM usage, driven by an Arduino over serial.
 - **A single needle**, with a **button** toggling between CPU and RAM (a
   click, handled by `gauge.py`; see "Script-driven firmware").
   Buttons on `INPUT_PULLUP` to ground, 50 ms software debounce.
-- **0→100→0 sweep** as a self-test on a 3 s press, 1 s at the top, with
+- **0→100→0 sweep** as a self-test on a 3 s press, 1 s at the top and 1 s
+  at zero before going back to what it shows, with
   every LCD pixel on (and full light) and a beep as a lamp test.
 - **The LCD replaces the mode lights:** it shows the metric the needle isn't
   showing; when toggling, it shows for 3 s which one is on the needle.
