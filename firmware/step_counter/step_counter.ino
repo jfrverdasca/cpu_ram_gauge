@@ -35,7 +35,7 @@ uint8_t phase = 0;
 long count = 0;
 unsigned int delayMs = 20;
 bool verbose = true;
-int posMax = 230;               // gauge.ino's POS_MAX until 'm' sets it
+int posMax = 242;               // gauge.ino's POS_MAX until 'm' sets it
 
 void setCoils(int8_t a, int8_t b) {
   digitalWrite(COIL_A1, a > 0);

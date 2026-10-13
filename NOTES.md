@@ -140,9 +140,11 @@ RAM usage, driven by an Arduino over serial.
     0x11–0x12) would be cheap to add; left out for now.
 - **Margins on the scale:** 0% = 12 half-steps above the end stop
   (`POS_MIN = 12`). It can go down to 4–6 if the scale needs it; less than
-  that and the needle hits. **`POS_MAX = 230`** (2026-10-13, was 278): 50%
-  (115) has the needle pointing straight up, measured with `step_counter`
-  (`h`, move to vertical, `m`). Redo it if `HOME_PHASE` changes (to-do 13).
+  that and the needle hits. **`POS_MAX = 242`** (2026-10-13, was 278): 50%
+  (127) has the needle pointing straight up and 100% mirrors 0% on the other
+  side. Measured with `step_counter`: `h`, `+12`, `z`, then `+115` to
+  vertical and `+115` to 100%; the scale spans 230 half-steps from
+  `POS_MIN`. Redo it if `HOME_PHASE` changes (to-do 13).
 
 ## Bench results (2026-10-02, direct drive D2/D3/D8/D9, sequence s0)
 - The motor responds to SwitecX25's X25 sequence (6 states).
