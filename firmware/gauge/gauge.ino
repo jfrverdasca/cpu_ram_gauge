@@ -507,6 +507,7 @@ void handleLine(char* s) {
       m.longBrk = constrain(longBrk, 1, 99);
       m.cycles = constrain(cycles, 1, 9);
       saveSettings(m);
+      if (pomoCycle > settings.cycles) pomoCycle = settings.cycles;
       break;
     }
     case 'S': {
