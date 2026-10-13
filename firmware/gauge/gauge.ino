@@ -43,7 +43,7 @@ const uint8_t RTC_PARK_REG = 0x07;  // alarm 1: 4 bytes, holds the parked record
 
 const int TRAVEL = 290;         // half-steps between end stops
 const int POS_MIN = 12;         // 0%
-const int POS_MAX = 278;        // 100%
+const int POS_MAX = 230;        // 100%: 50% points straight up
 
 const unsigned long START_US = 5000;      // first step from rest
 const unsigned long MIN_UP_US = 2000;
