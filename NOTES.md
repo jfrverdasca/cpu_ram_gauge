@@ -176,6 +176,15 @@ RAM usage, driven by an Arduino over serial.
     hourly, the LCD rows when they change.
   - **No thread:** `gauge.py` reads the port on every 50 ms reading, without
     waiting, so a click is answered within ~50 ms.
+  - **During the Pomodoro `gauge.py` almost rests** (2026-10-13): from
+    `POMODORO ON` to `POMODORO OFF` it reads every 250 ms instead of 50 ms
+    and sends only the needle (4 lines a second instead of 20 plus text),
+    with no app scans, network readings or LCD text. The needle still goes,
+    though the Arduino ignores it: with nothing at all it would count as
+    no data after 5 s, start parking when the Pomodoro ends and take the
+    LCD to full brightness. On `POMODORO OFF` it resends both rows (the LCD
+    still has the text from before) and rescans apps and network (their
+    figures would span the Pomodoro).
 - **Clock:** ZS-042 module (DS3231 + AT24C32, CR2032 cell) on I2C: VCC,
   GND, SDA → A4, SCL → A5 (the other pins are unused). On the bench
   2026-10-08: clock mode, `gauge.py` setting the time and parking, and the
@@ -634,3 +643,26 @@ LEDs, multimeter, flux, desoldering braid.
 13. Recalibrate `HOME_PHASE` for the motor mounted on 2026-10-09 (same
     model, swapped for the bench tests), with the procedure in 6. Until then
     a homing can end up to 4 half-steps above the stop.
+14. **Keep the Pomodoro across a reset** (noted 2026-10-13, not done).
+    Opening the serial port resets the Arduino (DTR), so starting
+    `gauge.py` (or its reconnecting after a port error) loses a Pomodoro
+    running without it. Plan: save the state only when it changes (enter,
+    pause, resume, phase over, next phase, exit: ~10 writes per session),
+    with the phase's **end time in UTC** rather than the time left, and on
+    boot work out what's left from the clock. Paused: the time left, resumed
+    as it was. Needs the clock module (without it there's no way to know how
+    long it was off).
+    - Where: the DS3231's registers don't wear out (battery-backed), but only
+      3 bytes are free (alarm 2; alarm 1 holds the parked needle) and the
+      state needs ~7 (phase, state, cycle, 4-byte end time, magic).
+    - **Recommended (not decided yet): the module's AT24C32 EEPROM**
+      (ZS-042, I2C 0x57, 4 KB, ~1,000,000 writes per byte): room for
+      everything, never wears out at ~10 writes a session, same I2C code as
+      the clock.
+    - Other options: packing it into the DS3231's 3 bytes (end time modulo
+      65,536 s ≈ 18 h, no magic: off for over 18 h mid-Pomodoro, ~9% chance
+      of resuming a phase with a meaningless time); the Arduino's EEPROM
+      (~100,000 writes, ~7 years at 4 Pomodoros a day).
+    - Alternative to the whole thing: stop the reset on opening the port
+      (10 µF between RESET and GND; uploading then needs the reset button).
+      Doing it in pyserial isn't reliable across systems and USB chips.

@@ -24,7 +24,7 @@ class FakeSerial:
         self.events = sorted(events)
         self.park_answer = park_answer
         self.duration = duration
-        self.written = []
+        self.written = []  # (seconds after opening, bytes)
 
     def elapsed(self):
         return time.monotonic() - self.start
@@ -43,13 +43,13 @@ class FakeSerial:
     def readline(self):
         if self.boot:
             return self.boot.pop(0)
-        if self.written and self.written[-1].endswith(b"P\n"):
+        if self.written and self.written[-1][1].endswith(b"P\n"):
             return self.park_answer + b"\n"
         time.sleep(0.01)
         return b""
 
     def write(self, data):
-        self.written.append(data)
+        self.written.append((self.elapsed(), data))
 
     def reset_input_buffer(self):
         pass
@@ -57,19 +57,27 @@ class FakeSerial:
     def close(self):
         pass
 
-    def lines(self):
-        return b"".join(self.written).decode().splitlines()
+    def lines(self, start=0, end=float("inf")):
+        """Lines written between start and end seconds after opening."""
+        data = b"".join(d for t, d in self.written if start <= t < end)
+        return data.decode().splitlines()
 
 
-def run_main(port, display_on=True, **patches):
-    """Runs gauge.main() on port with fixed readings; returns what it printed."""
+def run_main(port, display_on=True, scans=None, **patches):
+    """Runs gauge.main() on port with fixed readings; returns what it printed.
+    scans: a list that gets the time of every top apps scan."""
+    def top_apps():
+        if scans is not None:
+            scans.append(port.elapsed())
+        return ("Firefox", 5.0), ("Firefox", 10.0)
+
     out = io.StringIO()
     memory = namedtuple("Memory", "percent")(RAM)
     with mock.patch.object(gauge.serial, "Serial", lambda *a, **k: port), \
             mock.patch.object(gauge, "find_port", lambda: "fake"), \
             mock.patch.object(gauge.psutil, "cpu_percent", lambda *a, **k: CPU), \
             mock.patch.object(gauge.psutil, "virtual_memory", lambda: memory), \
-            mock.patch.object(gauge, "top_apps", lambda: (("Firefox", 5.0), ("Firefox", 10.0))), \
+            mock.patch.object(gauge, "top_apps", top_apps), \
             mock.patch.object(gauge, "display_on", lambda: display_on), \
             mock.patch.object(gauge.Network, "find_interface", lambda self: None), \
             mock.patch.object(gauge.Network, "read", lambda self: None), \
@@ -182,6 +190,22 @@ class Main(unittest.TestCase):
         output = run_main(port)
         self.assertIn("Pomodoro on", output)
         self.assertIn("Test", output)
+
+    def test_pomodoro_only_keeps_a_slow_needle(self):
+        # Rows and settings sent by 0.8 s; Pomodoro from 1.0 s to 3.0 s
+        port = FakeSerial(events=[(1.0, b"POMODORO ON\n"), (3.0, b"POMODORO OFF\n")],
+                          duration=4.0)
+        scans = []
+        run_main(port, scans=scans)
+        during = port.lines(1.3, 2.9)
+        self.assertTrue(4 <= len(during) <= 8)  # 4 a second, needle only
+        self.assertTrue(all(line.startswith("N") for line in during))
+        self.assertFalse([t for t in scans if 1.3 < t < 2.9])
+        after = port.lines(3.0)
+        self.assertGreater(sum(line.startswith("N") for line in after), 10)  # back to 20 a second
+        self.assertIn("T0", [line[:2] for line in after])  # rows resent at once
+        self.assertIn("T1", [line[:2] for line in after])
+        self.assertTrue([t for t in scans if t > 3.0])
 
     def test_exit_parks(self):
         self.assertIn("Parked.", run_main(FakeSerial(duration=0.3)))
