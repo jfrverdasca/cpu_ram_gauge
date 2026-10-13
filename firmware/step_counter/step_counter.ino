@@ -5,6 +5,10 @@
 // 40 mA absolute pin limit). Coils are released at the end of every move.
 //
 // Serial Monitor at 19200 baud, line ending "Newline". Type '?' for help.
+//
+// Scale calibration: 'h' homes exactly like gauge.ino, so position 0 here is the
+// gauge's 0 (the end stop) and 0% is POS_MIN. Move the needle to point straight up,
+// then 'm' takes that as 50% and prints the matching POS_MAX for gauge.ino.
 
 const uint8_t COIL_A1 = 2;
 const uint8_t COIL_A2 = 3;
@@ -19,11 +23,19 @@ const Phase* const SEQS[] = {SEQ_X25, SEQ_FULL, SEQ_HALF};
 const uint8_t SEQ_LEN[] = {6, 4, 8};
 const char* const SEQ_NAME[] = {"X25 / SwitecX25 (6 states)", "full step (4)", "half step (8)"};
 
+// Same values as gauge.ino
+const int TRAVEL = 290;
+const int POS_MIN = 12;
+const unsigned long HOMING_US = 5000;
+const unsigned long SETTLE_MS = 60;
+const int8_t HOME_PHASE = 6;
+
 uint8_t seq = 2;
 uint8_t phase = 0;
 long count = 0;
 unsigned int delayMs = 20;
 bool verbose = true;
+int posMax = 230;               // gauge.ino's POS_MAX until 'm' sets it
 
 void setCoils(int8_t a, int8_t b) {
   digitalWrite(COIL_A1, a > 0);
@@ -57,10 +69,49 @@ void move(long n) {
   Serial.println(count);
 }
 
+// gauge.ino's fullHoming(): afterwards the count matches the gauge's positions.
+void home() {
+  if (seq != 2) {
+    seq = 2;
+    phase = 0;
+    Serial.println(F("Sequence: half step"));
+  }
+  Serial.println(F("Homing..."));
+  applyPhase();
+  delay(SETTLE_MS);
+  for (int i = 0; i < TRAVEL + 10; i++) {
+    phase = (phase + 7) % 8;
+    applyPhase();
+    delayMicroseconds(HOMING_US);
+  }
+  while (HOME_PHASE >= 0 && phase != HOME_PHASE) {
+    phase = (phase + 7) % 8;
+    applyPhase();
+    delay(20);
+  }
+  delay(SETTLE_MS);
+  setCoils(0, 0);
+  count = 0;
+  Serial.println(F("Position: 0 (gauge zero)"));
+}
+
+int posFor(float percent) {
+  return POS_MIN + (int)((posMax - POS_MIN) * percent / 100.0 + 0.5);
+}
+
+void printScale() {
+  Serial.print(F("POS_MIN = ")); Serial.print(POS_MIN);
+  Serial.print(F(", 50% = ")); Serial.print(posFor(50));
+  Serial.print(F(", POS_MAX = ")); Serial.println(posMax);
+}
+
 void help() {
   Serial.println(F("\n--- VDO 91 255 008 bench test ---"));
   Serial.println(F("+N / -N  move N steps (no N = 1 step)"));
   Serial.println(F("z        reset the counter"));
+  Serial.println(F("h        home like gauge.ino (position 0 = gauge zero)"));
+  Serial.println(F("gN       go to N% of the scale (after 'h')"));
+  Serial.println(F("m        current position is 50%: set and print POS_MAX"));
   Serial.println(F("p        print the position"));
   Serial.println(F("dN       delay between steps, ms"));
   Serial.println(F("sN       sequence: s0 X25, s1 full step, s2 half step"));
@@ -98,6 +149,19 @@ void loop() {
     case '+': move(max(value, 1L)); break;
     case '-': move(-max(value, 1L)); break;
     case 'z': count = 0; Serial.println(F("Counter reset.")); break;
+    case 'h': home(); break;
+    case 'g':
+      if (seq != 2) Serial.println(F("Use 'h' first."));
+      else move(posFor(constrain(value, 0L, 100L)) - count);
+      break;
+    case 'm':
+      if (2 * count - POS_MIN > TRAVEL - 4) {
+        Serial.println(F("Too high: 100% would hit the end stop."));
+        break;
+      }
+      posMax = 2 * count - POS_MIN;
+      printScale();
+      break;
     case 'p': Serial.print(F("Position: ")); Serial.println(count); break;
     case 'd':
       if (value > 0) delayMs = value;
