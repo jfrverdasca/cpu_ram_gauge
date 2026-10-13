@@ -90,7 +90,7 @@ will do.
 
 - **Short press:** toggle the needle between CPU and RAM (the script's `MODES`).
 - **Hold 1 s:** start or leave the Pomodoro.
-- **Hold 3 s:** 0 → 100 → 0 sweep (self-test), 1 s at the top, with every LCD
+- **Hold 3 s:** 0 → 100 → 0 sweep (self-test), 1 s at the top and 1 s at zero, with every LCD
   pixel on and a beep.
 - **Hold while powering up:** force a full homing against the end stop.
 - **Pomodoro button:** start/pause, or start the next phase once one is over.

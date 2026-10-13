@@ -12,7 +12,8 @@
 //
 // Button, acting on release (the LCD shows what releasing will do while held):
 // < 1 s sends "CLICK"; 1-3 s enters or leaves the Pomodoro; >= 3 s lamp test: a
-// 0 -> 100 -> 0 sweep, 1 s at the top, every LCD pixel on and a beep.
+// 0 -> 100 -> 0 sweep, 1 s at the top and 1 s at the bottom, every LCD pixel on and a
+// beep.
 // Hold it while powering up to force a full homing (that release is ignored).
 // Pomodoro button: start/pause, or the next phase once one is over.
 //
@@ -78,7 +79,7 @@ const unsigned long SETTLE_MS = 60;
 const unsigned long DEBOUNCE_MS = 50;
 const unsigned long POMODORO_PRESS_MS = 1000;  // hold to enter/leave the Pomodoro
 const unsigned long TEST_PRESS_MS = 3000;      // hold for the lamp test
-const unsigned long TEST_TOP_MS = 1000;   // the lamp test's needle stays at 100% this long
+const unsigned long TEST_HOLD_MS = 1000;  // the lamp test's needle stays at 100%, then 0%
 const unsigned long LCD_REFRESH_MS = 250;
 const unsigned long SCREEN_OFF_MS = 60000; // LCD off this long after the last data
 const unsigned long WAKE_MS = 10000;      // LCD on after a press while it was off
@@ -117,9 +118,10 @@ char text[2][17];               // LCD rows from gauge.py
 uint8_t glyphs[8][8];           // LCD custom characters from gauge.py
 uint8_t glyphsChanged = 0;      // one bit per character, written by updateLcd()
 bool parked = false;            // EEPROM holds the current position
-// 0 = off, 1 = lamp test pending, 2 = going up, 3 = at the top, 4 = going down
+// 0 = off, 1 = lamp test pending, 2 = going up, 3 = at the top, 4 = going down,
+// 5 = at the bottom
 uint8_t sweep = 0;
-unsigned long sweepMs = 0;      // reached the top
+unsigned long sweepMs = 0;      // reached the top or the bottom
 Button mainButton = {BUTTON}, pomoButton = {POMODORO_BUTTON};
 uint8_t holding = 0;            // main button held: 0 = no, 1 = Pomodoro, 2 = lamp test
 unsigned long wokeMs = 0;       // last press that woke the LCD
@@ -586,21 +588,17 @@ int posFor(float percent) {
 
 void updateTarget() {
   if (sweep == 1) return;       // the needle finishes its move, then updateLcd() goes on
-  if (sweep == 2) {
-    target = POS_MAX;
+  // Up, a second at the top, down, a second at the bottom
+  if (sweep == 2 || sweep == 4) {
+    target = sweep == 2 ? POS_MAX : POS_MIN;
     if (stopped()) {
-      sweep = 3;
+      sweep++;
       sweepMs = millis();
     }
     return;
   }
-  if (sweep == 3) {
-    if (millis() - sweepMs >= TEST_TOP_MS) sweep = 4;
-    return;
-  }
-  if (sweep == 4) {
-    target = POS_MIN;
-    if (stopped()) sweep = 0;
+  if (sweep == 3 || sweep == 5) {
+    if (millis() - sweepMs >= TEST_HOLD_MS) sweep = sweep == 3 ? 4 : 0;
     return;
   }
 

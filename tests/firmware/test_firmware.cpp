@@ -180,8 +180,9 @@ TEST(hold_1s_starts_the_pomodoro) {
   CHECK(lcd.text(0).rfind("Focus 1/4  2", 0) == 0);   // "Focus 1/4  25:00" or 24:59
 }
 
-TEST(hold_3s_lamp_test_stays_1s_at_100) {
+TEST(hold_3s_lamp_test_stays_1s_at_100_and_1s_at_0) {
   boot();
+  feed = "N50";
   run(500);
   pressed[BUTTON] = true;
   run(1300);
@@ -203,9 +204,17 @@ TEST(hold_3s_lamp_test_stays_1s_at_100) {
   CHECK(pos == POS_MAX);
   run(900);
   CHECK(pos == POS_MAX);        // still at the top
-  run(3000);
+  ms = 0;
+  while (pos != POS_MIN && ms < 3000) {
+    run(1);
+    ms++;
+  }
   CHECK(pos == POS_MIN);
+  run(900);
+  CHECK(pos == POS_MIN);        // still at zero
+  run(2000);
   CHECK(sweep == 0);
+  CHECK(pos == posFor(50));     // back to the script's needle
 }
 
 TEST(release_after_forced_homing_is_ignored) {
