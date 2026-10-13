@@ -57,10 +57,11 @@ RAM usage, driven by an Arduino over serial.
   every 50 ms stayed.
 
 ## Decided design
-- **A single needle**, with a **button** toggling between CPU and RAM.
-  Button on `INPUT_PULLUP` to ground, 50 ms software debounce.
-- **0→100→0 sweep** as a self-test on a long press, with every LCD pixel on
-  (and full light) as a lamp test.
+- **A single needle**, with a **button** toggling between CPU and RAM (a
+  click, handled by `gauge.py`; see "Script-driven firmware").
+  Buttons on `INPUT_PULLUP` to ground, 50 ms software debounce.
+- **0→100→0 sweep** as a self-test on a 3 s press, 1 s at the top, with
+  every LCD pixel on (and full light) and a beep as a lamp test.
 - **The LCD replaces the mode lights:** it shows the metric the needle isn't
   showing; when toggling, it shows for 3 s which one is on the needle.
   - **Row 1 is contextual** (2026-10-09): uptime and network normally; with
@@ -88,9 +89,92 @@ RAM usage, driven by an Arduino over serial.
   normally off: sustained CPU > 90%, end of a Pomodoro phase, etc. 5 V LEDs;
   the original bulbs (~12 V / 1.2 W) would need a 12 V supply. Beware of
   "automotive" T5 LEDs: many are for 12 V.
-- **Pomodoro (future):** on the Arduino, so it works without the PC. Second
-  button (short = start/pause, long = exit); work 100%→0%, break rises back
-  to 100%; LCD with the exact time and count; alert via a **passive piezo**.
+- **Pomodoro** (implemented 2026-10-13; button and piezo still to be wired
+  and tested): on the Arduino, so it works without the PC. Entered and left
+  with a 1 s press on the main button. A second, dedicated button (D11)
+  only starts/pauses the time, or starts the next phase. Work and breaks
+  both run the needle 100%→0% as the time runs out (it was: break rising
+  back to 100%); alert via a **passive piezo** (D13).
+  - Entering starts the first focus at once.
+  - At the end of a phase the piezo beeps 3 times and the next phase waits
+    for the Pomodoro button (the needle stays at 0%). Long break after every
+    `cycles` focus sessions.
+  - Durations (focus, break, long break, cycles before the long one) and the
+    piezo's tone and volume are set at the top of `gauge.py` and saved on
+    the Arduino (EEPROM), so it works without the PC. Defaults 25/5/15 min,
+    long break every 4, 2000 Hz, volume 50.
+  - Clicks on the main button are ignored while in Pomodoro; only the 1 s
+    press (exit) and the 3 s press (lamp test, which then goes back to the
+    Pomodoro) work. The script's needle and text are ignored meanwhile.
+  - The LCD stays lit (the script's brightness, full without the script or
+    with the computer asleep).
+  - The needle position goes to the clock module as in clock mode; without
+    it, it isn't saved (the EEPROM would wear out: a step every ~6 s), so a
+    power cut mid-Pomodoro means a homing on the next boot.
+  - LCD (to try on the real display):
+
+    | State | Row 0 | Row 1 |
+    |---|---|---|
+    | running | `Focus 2/4  24:13` / `Break 2/4   4:59` / `Long break 14:59` | time of day (empty without the clock module) |
+    | paused | same | `Paused` (steady, not blinking) |
+    | phase over | `Break time!` / `Long break time!` / `Focus time!` | time of day |
+
+  - **Piezo volume:** `tone()` only sets the pitch, so the firmware drives D13
+    from Timer2 itself (compare interrupt, 4 µs ticks) with the volume as
+    the duty cycle: 100 = 50% (loudest), lower is quieter, 0 silent.
+    1000–5000 Hz (the timer's range; piezos sound best around 2–4 kHz). How
+    loud it really gets depends on the piezo: tune `BEEP_HZ`/`BEEP_VOLUME`
+    once it arrives. Timer2 is free: D3 and D11 don't use PWM. The Nano's
+    on-board LED (D13) blinks with the beeps.
+- **Script-driven firmware (decided and implemented 2026-10-13):** the
+  Arduino is only the physical part; `gauge.py` holds the modes and decides
+  what the needle and the LCD show. Rule: **the Arduino keeps what must work
+  without the PC or protects the hardware; the script owns the meaning.** It
+  makes new metrics and modes Python-only (no reflashing) and freed firmware
+  RAM for the Pomodoro (833 → 800 bytes with it; flash 16.6 → 19.2 KB).
+  - **Arduino:** motor (ramp, settle, dead zone), the scale (`POS_MIN`/
+    `POS_MAX`: the script sends percentages, not steps), homing, parking,
+    the data timeout (clock or park, LCD off), clock and date, Pomodoro,
+    lamp test.
+  - **Script:** what the needle shows, both LCD rows, glyphs, brightness,
+    the modes (`MODES`, in click order) and what clicks mean. The
+    `Needle: ...` notice moved to the script. Everything safe to change is
+    at the top of `gauge.py`.
+  - **Main button**, classified by the Arduino on release, never on reaching
+    a threshold (holding to 3 s must not trigger the 1 s action on the way).
+    While held, the LCD shows what releasing will do:
+
+    | Held | LCD while held | On release |
+    |---|---|---|
+    | < 1 s | — | `CLICK` to the script; with the LCD off, wakes it for 10 s instead |
+    | 1–3 s | `Start pomodoro` / `Exit pomodoro` | enter/leave Pomodoro (Arduino) |
+    | ≥ 3 s | `Test` | lamp test (Arduino) |
+    | at power-up | — | forced homing; that release is ignored |
+
+  - **Clicks are raw:** the Arduino sends one `CLICK` per short press and
+    interprets nothing. Double clicks etc. would be the script's: the ~300 ms
+    wait to tell a single from a double click only exists once the script
+    uses double clicks, so a plain click acts at once.
+  - **The Arduino reports its local actions too** (`POMODORO ON`/`OFF`,
+    `TEST`); the script only logs them, as the Arduino ignores its needle and
+    text while they last.
+  - **LCD off** (no data for a minute, or the computer asleep): a click only
+    wakes it for 10 s, showing "No data" or the clock, as before. The script
+    couldn't show anything then anyway. Only with the LCD on and the script
+    running (a line in the last 15 s) does the click go to the script.
+  - **Heartbeat:** the needle line `N`, every reading (50 ms); while the
+    computer sleeps, `B0` every 5 s.
+  - **Protocol version:** `READY 2` at boot. `gauge.py` waits for it on
+    connecting (up to 10 s, homing included) and exits on a mismatch (also
+    an old firmware's bare `READY`), as firmware and script no longer work
+    without each other. Without any `READY` it warns and carries on.
+  - **Sent only when needed:** glyphs, Pomodoro and piezo settings,
+    brightness and time on connecting and on every `READY` (the Arduino
+    restarted, which before went unnoticed and needed resending every 5 s);
+    brightness also when the computer's screen sleeps or wakes, the time
+    hourly, the LCD rows when they change.
+  - **No thread:** `gauge.py` reads the port on every 50 ms reading, without
+    waiting, so a click is answered within ~50 ms.
 - **Clock:** ZS-042 module (DS3231 + AT24C32, CR2032 cell) on I2C: VCC,
   GND, SDA → A4, SCL → A5 (the other pins are unused). On the bench
   2026-10-08: clock mode, `gauge.py` setting the time and parking, and the
@@ -196,19 +280,38 @@ RAM usage, driven by an Arduino over serial.
 - `firmware/gauge/`: final sketch.
 - `pc/gauge.py`: PC script (`pip install -r pc/requirements.txt`).
   Runs on macOS and Linux; also starts on Windows (without screen detection).
+- `tests/run.sh` (2026-10-13): `tests/test_gauge.py` runs `gauge.py` against a
+  fake serial port (unittest); `tests/firmware/test_firmware.cpp` runs
+  `gauge.ino` on the computer, with `tests/firmware/mock/` standing in for the
+  Arduino core, EEPROM, LCD and I2C (no clock module), each test in its own
+  process so it starts from a fresh boot. `arduino-cli --preprocess` adds the
+  function prototypes the IDE adds, so the sketch compiles unchanged. They
+  caught `constrain(strtol(...))` reading too many numbers: `constrain()` is a
+  macro that evaluates its argument more than once.
 - Compiling without the IDE: `arduino-cli` ships inside Arduino IDE.app;
   pass `--libraries ~/Library/Arduino15/libraries` so it finds
   LiquidCrystal.
 
-### Serial protocol (PC → Arduino)
+### Serial protocol (version 2, 2026-10-13)
+PC → Arduino:
 | Line | Meaning |
 |---|---|
-| `C45.3 R72.1` | CPU and RAM readings (every 50 ms) |
-| `T<row><needle><text>` | LCD text: row `0`/`1`, for when the needle shows CPU (`C`) or RAM (`R`) (every 0.25 s) |
-| `G<0-7><16 hex>` | 5×8 custom character, top row first; in text use `chr(n)`, except slot 0, which is `chr(8)` (byte 0 would end the line). Don't use `8 + n` for the others: 10 and 13 are `\n` and `\r` (every 5 s) |
-| `B<0-255>` | lighting brightness (PWM on D10), used only while data arrives (255 during the sweep and with no data); `0` turns the LCD off (every 5 s) |
-| `P` | park; the Arduino replies `PARKED` |
-| `Z<UTC seconds> <offset> <0/1>` | time for the clock module: UTC, standard offset in minutes, whether the zone has (EU) summer time (every 5 s) |
+| `N45.3` | needle, % (every 50 ms; also the sign the script is alive) |
+| `T<row><text>` | LCD row `0`/`1` (when it changes) |
+| `G<0-7><16 hex>` | 5×8 custom character, top row first; in text use `chr(n)`, except slot 0, which is `chr(8)` (byte 0 would end the line). Don't use `8 + n` for the others: 10 and 13 are `\n` and `\r` |
+| `B<0-255>` | lighting brightness (PWM on D10), used only while data arrives (255 during the sweep and with no data); `0` turns the LCD off (when the screen sleeps or wakes; `B0` every 5 s while asleep) |
+| `P` | park; the Arduino replies `PARKED` (`POMODORO ON` in the Pomodoro: the needle stays) |
+| `Z<UTC seconds> <offset> <0/1>` | time for the clock module: UTC, standard offset in minutes, whether the zone has (EU) summer time (hourly) |
+| `M<focus> <break> <long break> <cycles>` | Pomodoro minutes (1–99) and focus sessions before the long break (1–9); EEPROM |
+| `S<Hz> <volume>` | piezo tone (1000–5000) and volume (0–100); EEPROM |
+
+`G`, `M`, `S`, `B` and `Z` also go on connecting and on every `READY`.
+
+Arduino → PC: `READY 2` (boot, after any homing), `PARKED`, `CLICK`,
+`POMODORO ON`, `POMODORO OFF`, `TEST`.
+
+Version 1 (until 2026-10-13): `C45.3 R72.1` readings and `T<row><C/R><text>`
+for each metric; the Arduino picked the metric and showed `Needle: ...`.
 
 Everything that isn't a reading goes into a queue and is sent **one line per
 reading** (≤ ~32 bytes every 50 ms). The Arduino's receive buffer is only 64
@@ -225,10 +328,9 @@ both wrote readings: the needle swung between the two values. A second
 The lock is advisory (`flock`): the Arduino IDE's Serial Monitor or any program
 that doesn't ask for it can still open the port.
 
-`G`, `B` and the text are resent even without changes: if the Arduino resets
-with the port open (reset button, brownout), the PC doesn't notice and the LCD
-loses its glyphs. The firmware ignores identical glyphs, so the cost is almost
-nil. Alternative not done: resend only on receiving `READY`.
+If the Arduino resets with the port open (reset button, brownout), the LCD
+loses its glyphs. Until 2026-10-13 `G`, `B` and the text were resent every few
+seconds for that; now `gauge.py` reads every line and resends them on `READY`.
 
 ### Behaviour
 - **LCD text composed in `gauge.py`** (`lcd_rows()`, `GLYPHS`,
@@ -242,8 +344,8 @@ nil. Alternative not done: resend only on receiving `READY`.
   Long app name: only the name slides (icon and % stay still), done in
   Python, one letter every 0.5 s and 2 s still at each end. The LCD's own
   scroll doesn't work: it shifts both rows together.
-  The Arduino only picks the variant; `Needle: ...`, `No data` and
-  `Homing...` come from the Arduino.
+  `No data`, `Homing...`, the clock and the Pomodoro screens come from the
+  Arduino; everything else from `gauge.py`.
 - **Top apps:** summed per app. On macOS a process counts towards the
   outermost `.app` bundle of its executable (2026-10-10): Firefox's
   `plugin-container`, Chrome's and VS Code's helpers. Outside a bundle, the
@@ -290,7 +392,9 @@ nil. Alternative not done: resend only on receiving `READY`.
 - Uses `update`: in practice only `MAGIC` gets rewritten (2 writes per
   park/move cycle, ~100,000 per byte → more than 10 years).
 - With the clock module the parked record goes to the RTC instead (see
-  Clock). Address 8: the time zone from `gauge.py` (4 bytes).
+  Clock). Address 8: the time zone from `gauge.py` (4 bytes). Address 12:
+  Pomodoro and piezo settings from `gauge.py` (8 bytes, written only when
+  they change).
 
 ## Final version electronics
 
@@ -312,8 +416,8 @@ unchanged.
 | D7, D12 | LCD RS, E |
 | A0–A3 | LCD D4–D7 |
 | D10 | lighting: LCD + needle + scale (PWM, via transistor) |
-| D11 | Pomodoro button (future) |
-| D13 | piezo (future; `tone()` doesn't interfere with PWM on D10) |
+| D11 | Pomodoro button, to ground (in the firmware; not wired yet) |
+| D13 | passive piezo, driven from Timer2 (in the firmware; not wired yet) |
 | A4, A5 | RTC clock (DS3231), I2C SDA/SCL |
 | A6, A7 | free (analog input only) |
 | D0, D1 | **don't use**: they're serial/USB |

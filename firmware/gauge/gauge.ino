@@ -1,25 +1,36 @@
-// CPU/RAM gauge driven by a VDO/Siemens 91 255 008 instrument-cluster stepper.
+// Needle gauge driven by a VDO/Siemens 91 255 008 instrument-cluster stepper.
 //
-// Serial input (from pc/gauge.py): "C45.3 R72.1\n" readings, "T0C<text>\n" LCD text
-// (row 0 or 1, for when the needle shows CPU or RAM), "G0<16 hex digits>\n" custom
-// LCD character 0-7 (8 rows, top first), "B0".."B255" backlight (0 = LCD off, sent
-// when the computer's screen sleeps). "P\n" asks to park. "Z<UTC seconds> <standard
-// offset, minutes> <0/1 summer time>\n" sets the clock.
-// Button: short press toggles CPU/RAM; hold 1 s for a 0 -> 100 -> 0 sweep, with every
-// LCD pixel on (and full light) as a lamp test.
-// Hold the button while powering up to force a full homing.
-// The 16x2 LCD shows the text gauge.py sends for the current needle metric. After a
-// button press it shows which one the needle has for 3 s.
+// Only the physical part: pc/gauge.py decides what the needle and the LCD show and
+// what a click means. Serial input (protocol 2): "N45.3\n" needle %, sent every 50 ms
+// (also the sign gauge.py is alive), "T0<text>\n" LCD row 0 or 1, "G0<16 hex digits>\n"
+// custom LCD character 0-7 (8 rows, top first), "B0".."B255" backlight (0 = LCD off,
+// sent when the computer's screen sleeps). "P\n" asks to park. "Z<UTC seconds>
+// <standard offset, minutes> <0/1 summer time>\n" sets the clock. "M<focus> <break>
+// <long break> <cycles>\n" Pomodoro minutes, "S<Hz> <volume 0-100>\n" piezo; both
+// saved to EEPROM.
+// Output: "READY 2" at boot, "PARKED", "CLICK", "POMODORO ON"/"POMODORO OFF", "TEST".
+//
+// Button, acting on release (the LCD shows what releasing will do while held):
+// < 1 s sends "CLICK"; 1-3 s enters or leaves the Pomodoro; >= 3 s lamp test: a
+// 0 -> 100 -> 0 sweep, 1 s at the top, every LCD pixel on and a beep.
+// Hold it while powering up to force a full homing (that release is ignored).
+// Pomodoro button: start/pause, or the next phase once one is over.
+//
+// Pomodoro: focus, break, long break after every few focus sessions. The needle runs
+// from 100% to 0% as each phase's time runs out; at the end the piezo beeps and the
+// next phase waits for the Pomodoro button. Clicks and gauge.py's needle and text are
+// ignored meanwhile.
 //
 // With no data for 5 s (or on "P") the needle parks at 0% and its position is saved
 // to EEPROM, so the next boot doesn't need to grind against the end stop. After a
 // minute with no data the LCD and its backlight turn off; a short press then only
-// wakes it for 10 s instead of toggling CPU/RAM.
+// wakes it for 10 s.
 //
 // With a DS3231 clock module (I2C, A4/A5) and no data, the needle shows the minutes
 // (0-60%) and the LCD the time and date; only its light turns off, and a short press
 // lights it for 10 s. Not while gauge.py keeps saying the computer's screen sleeps
-// (brightness 0): then the needle parks at 0% and the LCD turns off as before. The clock keeps UTC; summer time follows the EU rule. The parked
+// (brightness 0): then the needle parks at 0% and the LCD turns off as before. The
+// clock keeps UTC; summer time follows the EU rule. The parked
 // position goes to the clock's alarm registers (battery-backed, no write limit) instead
 // of the EEPROM, as the needle then moves every minute.
 //
@@ -35,6 +46,8 @@ const uint8_t COIL_A2 = 3;
 const uint8_t COIL_B1 = 8;
 const uint8_t COIL_B2 = 9;
 const uint8_t BUTTON = 4;       // to GND
+const uint8_t POMODORO_BUTTON = 11;  // to GND
+const uint8_t PIEZO = 13;       // passive piezo, driven from Timer2 (bit 5 of PORTB)
 const uint8_t LCD_RS = 7;
 const uint8_t LCD_E = 12;       // LCD D4-D7 on A0-A3, RW to GND
 const uint8_t LCD_LIGHT = 10;   // backlight (PWM), through a resistor
@@ -63,12 +76,15 @@ const unsigned long RELEASE_MS = 100;     // de-energize coils once stopped
 // loses steps (going down most): a target falling ~5 steps every 50 ms lost dozens.
 const unsigned long SETTLE_MS = 60;
 const unsigned long DEBOUNCE_MS = 50;
-const unsigned long LONG_PRESS_MS = 1000;
+const unsigned long POMODORO_PRESS_MS = 1000;  // hold to enter/leave the Pomodoro
+const unsigned long TEST_PRESS_MS = 3000;      // hold for the lamp test
+const unsigned long TEST_TOP_MS = 1000;   // the lamp test's needle stays at 100% this long
 const unsigned long LCD_REFRESH_MS = 250;
-const unsigned long NOTICE_MS = 3000;     // "Needle: ..." after a button press
 const unsigned long SCREEN_OFF_MS = 60000; // LCD off this long after the last data
 const unsigned long WAKE_MS = 10000;      // LCD on after a press while it was off
 const unsigned long SLEEP_MS = 15000;     // "B0" holds this long (gauge.py resends every 5 s)
+const unsigned long SCRIPT_MS = 15000;    // gauge.py counts as running this long after a line
+const unsigned long BEEP_MS = 150;        // each beep and each gap
 
 const int8_t HALF_STEP[8][2] = {{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1}};
 
@@ -77,6 +93,15 @@ struct Parked { int16_t pos; uint8_t phase; uint8_t magic; };
 const uint8_t MAGIC = 0xA9;
 struct Zone { int16_t stdMin; uint8_t summer; uint8_t magic; };  // from gauge.py
 const int ZONE_ADDR = 8;        // EEPROM, after the parked record
+// From gauge.py ("M", "S"): Pomodoro minutes, focus sessions before the long break,
+// piezo tone and volume
+struct Settings { uint8_t focus, brk, longBrk, cycles; uint16_t hz; uint8_t volume, magic; };
+const int SETTINGS_ADDR = 12;   // EEPROM, after the zone
+
+enum PomoPhase : uint8_t { FOCUS, BREAK, LONG_BREAK };
+enum PomoState : uint8_t { RUNNING, PAUSED, OVER };   // OVER: waits for the button
+
+struct Button { uint8_t pin; bool raw, down, skip; unsigned long changedMs, pressedMs; };
 
 int pos = 0, target = 0;
 int8_t dir = 0;
@@ -84,17 +109,19 @@ uint8_t speed = 0, phase = 0;
 bool energized = false;
 unsigned long lastStepUs = 0, stoppedMs = 0;   // stoppedMs: still on the current phase since
 
-bool showRam = false;
-float cpu = 0, ram = 0;
+float needle = 0;               // % from gauge.py
 bool hasData = false;
 unsigned long lastDataMs = 0;
 unsigned long lastLineMs = 0;   // any line from gauge.py
-char text[2][2][17];            // LCD text from gauge.py: [row][needle shows RAM]
+char text[2][17];               // LCD rows from gauge.py
 uint8_t glyphs[8][8];           // LCD custom characters from gauge.py
 uint8_t glyphsChanged = 0;      // one bit per character, written by updateLcd()
 bool parked = false;            // EEPROM holds the current position
-uint8_t sweep = 0;              // 0 = off, 1 = lamp test pending, 2 = going up, 3 = going down
-unsigned long switchedMs = 0;   // last CPU/RAM toggle (0 = also shown at boot)
+// 0 = off, 1 = lamp test pending, 2 = going up, 3 = at the top, 4 = going down
+uint8_t sweep = 0;
+unsigned long sweepMs = 0;      // reached the top
+Button mainButton = {BUTTON}, pomoButton = {POMODORO_BUTTON};
+uint8_t holding = 0;            // main button held: 0 = no, 1 = Pomodoro, 2 = lamp test
 unsigned long wokeMs = 0;       // last press that woke the LCD
 bool screenOn = true;
 uint8_t brightness = 255;       // from gauge.py
@@ -105,6 +132,17 @@ uint32_t utcNow = 0;            // seconds since 1970, read while the needle is 
 Zone zone = {0, 1, MAGIC};
 uint32_t syncUtc = 0;           // time from gauge.py, applied once the needle is still
 unsigned long syncMs = 0;       // when it arrived; 0 = nothing pending
+
+Settings settings = {25, 5, 15, 4, 2000, 50, MAGIC};
+bool pomo = false;              // in the Pomodoro
+PomoPhase pomoPhase = FOCUS;
+PomoState pomoState = RUNNING;
+uint8_t pomoCycle = 1;          // focus session, 1..settings.cycles
+unsigned long pomoEndMs = 0;    // while running
+unsigned long pomoLeftMs = 0;   // while paused or over
+uint8_t beepsLeft = 0;          // beeps and gaps still to play
+unsigned long beepMs = 0;
+volatile uint8_t piezoHigh, piezoLow;  // Timer2 ticks (4 us) of each half wave, minus 1
 
 LiquidCrystal lcd(LCD_RS, LCD_E, A0, A1, A2, A3);
 
@@ -305,57 +343,179 @@ void updateClock() {
   syncMs = 0;
 }
 
+// ---------------------------------------------------------------- piezo
+
+// Square wave on D13 toggled by Timer2's compare interrupt (CTC, 4 us ticks). The
+// volume is the duty cycle: 100 = 50% (loudest), lower is quieter. 1000-5000 Hz.
+void piezoTone(bool on) {
+  TIMSK2 = 0;
+  PORTB &= ~_BV(5);
+  if (!on || settings.volume == 0) return;
+  uint8_t period = 250000UL / settings.hz;
+  uint8_t high = max(2, period * settings.volume / 200);
+  piezoHigh = high - 1;
+  piezoLow = period - high - 1;
+  TCCR2A = _BV(WGM21);          // CTC: counts up to OCR2A
+  TCCR2B = _BV(CS22);           // clk/64
+  TCNT2 = 0;
+  OCR2A = piezoHigh;
+  PORTB |= _BV(5);
+  TIMSK2 = _BV(OCIE2A);
+}
+
+ISR(TIMER2_COMPA_vect) {
+  if (PORTB & _BV(5)) {
+    PORTB &= ~_BV(5);
+    OCR2A = piezoLow;
+  } else {
+    PORTB |= _BV(5);
+    OCR2A = piezoHigh;
+  }
+}
+
+void beep(uint8_t n) {
+  beepsLeft = n * 2;
+  beepMs = millis() - BEEP_MS;
+}
+
+void updatePiezo() {
+  if (!beepsLeft || millis() - beepMs < BEEP_MS) return;
+  beepMs = millis();
+  beepsLeft--;
+  piezoTone(beepsLeft % 2);     // odd: a beep, even: a gap
+}
+
+// ---------------------------------------------------------------- pomodoro
+
+unsigned long pomoTotalMs() {
+  uint8_t m = pomoPhase == FOCUS ? settings.focus : pomoPhase == BREAK ? settings.brk : settings.longBrk;
+  return m * 60000UL;
+}
+
+unsigned long pomoLeft() {
+  if (pomoState != RUNNING) return pomoLeftMs;
+  long left = pomoEndMs - millis();
+  return left > 0 ? left : 0;
+}
+
+bool longBreakNext() { return pomoCycle % settings.cycles == 0; }
+
+void startPhase(PomoPhase p) {
+  pomoPhase = p;
+  pomoState = RUNNING;
+  pomoEndMs = millis() + pomoTotalMs();
+}
+
+void togglePomodoro() {
+  pomo = !pomo;
+  if (pomo) {
+    pomoCycle = 1;
+    startPhase(FOCUS);
+  } else {
+    beepsLeft = 0;
+    piezoTone(false);
+  }
+  Serial.println(pomo ? F("POMODORO ON") : F("POMODORO OFF"));
+}
+
+void pomodoroButton() {
+  if (!pomo) return;
+  if (pomoState == RUNNING) {
+    pomoLeftMs = pomoLeft();
+    pomoState = PAUSED;
+  } else if (pomoState == PAUSED) {
+    pomoEndMs = millis() + pomoLeftMs;
+    pomoState = RUNNING;
+  } else if (pomoPhase == FOCUS) {
+    startPhase(longBreakNext() ? LONG_BREAK : BREAK);
+  } else {
+    pomoCycle = pomoCycle % settings.cycles + 1;
+    startPhase(FOCUS);
+  }
+}
+
+void updatePomodoro() {
+  if (!pomo || pomoState != RUNNING || pomoLeft() > 0) return;
+  pomoState = OVER;
+  pomoLeftMs = 0;
+  beep(3);
+}
+
 // ---------------------------------------------------------------- input
+
+void saveSettings(const Settings& s) {
+  if (memcmp(&s, &settings, sizeof(s)) == 0) return;
+  settings = s;
+  EEPROM.put(SETTINGS_ADDR, settings);
+}
 
 void handleLine(char* s) {
   lastLineMs = millis();
-  if (strcmp(s, "P") == 0) {
-    hasData = false;
-    if (parked) Serial.println(F("PARKED"));
-    return;
-  }
-  if (s[0] == 'G') {
-    uint8_t n = s[1] - '0';
-    if (n > 7 || strlen(s) != 18) return;
-    uint8_t g[8];
-    for (uint8_t i = 0; i < 8; i++) {
-      char hex[3] = {s[2 + 2 * i], s[3 + 2 * i], '\0'};
-      g[i] = strtoul(hex, NULL, 16);
+  char* end;
+  switch (s[0]) {
+    case 'N':
+      needle = atof(s + 1);
+      hasData = true;
+      lastDataMs = millis();
+      break;
+    case 'T': {
+      uint8_t row = s[1] - '0';
+      if (row <= 1) strlcpy(text[row], s + 2, sizeof(text[0]));
+      break;
     }
-    if (memcmp(g, glyphs[n], 8) != 0) {
-      memcpy(glyphs[n], g, 8);
-      glyphsChanged |= 1 << n;
+    case 'P':
+      hasData = false;
+      if (pomo) Serial.println(F("POMODORO ON"));   // the needle stays with the Pomodoro
+      else if (parked) Serial.println(F("PARKED"));
+      break;
+    case 'G': {
+      uint8_t n = s[1] - '0';
+      if (n > 7 || strlen(s) != 18) return;
+      uint8_t g[8];
+      for (uint8_t i = 0; i < 8; i++) {
+        char hex[3] = {s[2 + 2 * i], s[3 + 2 * i], '\0'};
+        g[i] = strtoul(hex, NULL, 16);
+      }
+      if (memcmp(g, glyphs[n], 8) != 0) {
+        memcpy(glyphs[n], g, 8);
+        glyphsChanged |= 1 << n;
+      }
+      break;
     }
-    return;
-  }
-  if (s[0] == 'Z') {
-    char* end;
-    syncUtc = strtoul(s + 1, &end, 10);
-    syncMs = millis() | 1;
-    Zone z = {(int16_t)strtol(end, &end, 10), (uint8_t)(strtol(end, NULL, 10) != 0), MAGIC};
-    if (memcmp(&z, &zone, sizeof(z)) != 0) {
-      zone = z;
-      EEPROM.put(ZONE_ADDR, zone);
+    case 'Z': {
+      syncUtc = strtoul(s + 1, &end, 10);
+      syncMs = millis() | 1;
+      Zone z = {(int16_t)strtol(end, &end, 10), (uint8_t)(strtol(end, NULL, 10) != 0), MAGIC};
+      if (memcmp(&z, &zone, sizeof(z)) != 0) {
+        zone = z;
+        EEPROM.put(ZONE_ADDR, zone);
+      }
+      break;
     }
-    return;
+    case 'B':
+      brightness = constrain(atoi(s + 1), 0, 255);
+      break;
+    // constrain() is a macro that evaluates its argument more than once: parse first
+    case 'M': {
+      long focus = strtol(s + 1, &end, 10), brk = strtol(end, &end, 10),
+           longBrk = strtol(end, &end, 10), cycles = strtol(end, NULL, 10);
+      Settings m = settings;
+      m.focus = constrain(focus, 1, 99);
+      m.brk = constrain(brk, 1, 99);
+      m.longBrk = constrain(longBrk, 1, 99);
+      m.cycles = constrain(cycles, 1, 9);
+      saveSettings(m);
+      break;
+    }
+    case 'S': {
+      long hz = strtol(s + 1, &end, 10), volume = strtol(end, NULL, 10);
+      Settings m = settings;
+      m.hz = constrain(hz, 1000, 5000);
+      m.volume = constrain(volume, 0, 100);
+      saveSettings(m);
+      break;
+    }
   }
-  if (s[0] == 'B') {
-    brightness = constrain(atoi(s + 1), 0, 255);
-    return;
-  }
-  if (s[0] == 'T') {
-    uint8_t row = s[1] - '0';
-    if (row > 1 || (s[2] != 'C' && s[2] != 'R')) return;
-    strlcpy(text[row][s[2] == 'R'], s + 3, sizeof(text[0][0]));
-    return;
-  }
-  char* c = strchr(s, 'C');
-  char* r = strchr(s, 'R');
-  if (!c || !r) return;
-  cpu = atof(c + 1);
-  ram = atof(r + 1);
-  hasData = true;
-  lastDataMs = millis();
 }
 
 void readSerial() {
@@ -373,33 +533,42 @@ void readSerial() {
   }
 }
 
-void readButton() {
-  static bool down = false, raw = false, longDone = false;
-  static unsigned long changedMs = 0, pressedMs = 0;
+// Debounced; true when the button was just pressed or released.
+bool debounce(Button& b) {
+  bool now = digitalRead(b.pin) == LOW;
+  if (now != b.raw) {
+    b.raw = now;
+    b.changedMs = millis();
+  }
+  if (millis() - b.changedMs < DEBOUNCE_MS || b.raw == b.down) return false;
+  b.down = b.raw;
+  if (b.down) b.pressedMs = millis();
+  return true;
+}
 
-  bool now = digitalRead(BUTTON) == LOW;
-  if (now != raw) {
-    raw = now;
-    changedMs = millis();
-  }
-  if (millis() - changedMs < DEBOUNCE_MS) return;
+bool scriptRunning() { return lastLineMs && millis() - lastLineMs < SCRIPT_MS; }
 
-  if (raw != down) {
-    down = raw;
-    if (down) {
-      pressedMs = millis();
-      longDone = false;
-    } else if (!longDone && !screenOn) {
-      wokeMs = millis();
-    } else if (!longDone) {
-      showRam = !showRam;
-      switchedMs = millis();
-    }
+void startTest() {
+  sweep = 1;
+  beep(1);
+  Serial.println(F("TEST"));
+}
+
+// The main button acts on release, by how long it was held.
+void readButtons() {
+  Button& b = mainButton;
+  if (debounce(b) && !b.down) {
+    unsigned long held = millis() - b.pressedMs;
+    if (b.skip) b.skip = false;   // the press that forced the homing
+    else if (held >= TEST_PRESS_MS) startTest();
+    else if (held >= POMODORO_PRESS_MS) togglePomodoro();
+    else if (!screenOn) wokeMs = millis();
+    else if (!pomo && scriptRunning()) Serial.println(F("CLICK"));
   }
-  if (down && !longDone && millis() - pressedMs >= LONG_PRESS_MS) {
-    longDone = true;
-    sweep = 1;
-  }
+  unsigned long held = millis() - b.pressedMs;
+  holding = !b.down || b.skip ? 0 : held >= TEST_PRESS_MS ? 2 : held >= POMODORO_PRESS_MS ? 1 : 0;
+
+  if (debounce(pomoButton) && pomoButton.down) pomodoroButton();
 }
 
 // ---------------------------------------------------------------- logic
@@ -417,9 +586,28 @@ int posFor(float percent) {
 
 void updateTarget() {
   if (sweep == 1) return;       // the needle finishes its move, then updateLcd() goes on
-  if (sweep) {
-    target = sweep == 2 ? POS_MAX : POS_MIN;
-    if (stopped()) sweep = sweep == 2 ? 3 : 0;
+  if (sweep == 2) {
+    target = POS_MAX;
+    if (stopped()) {
+      sweep = 3;
+      sweepMs = millis();
+    }
+    return;
+  }
+  if (sweep == 3) {
+    if (millis() - sweepMs >= TEST_TOP_MS) sweep = 4;
+    return;
+  }
+  if (sweep == 4) {
+    target = POS_MIN;
+    if (stopped()) sweep = 0;
+    return;
+  }
+
+  if (pomo) {
+    target = posFor(pomoLeft() * 100.0 / pomoTotalMs());
+    // Like the clock: only to the clock module, as the EEPROM would wear out
+    if (rtcOk && !parked && stopped()) saveParked();
     return;
   }
 
@@ -432,7 +620,7 @@ void updateTarget() {
     return;
   }
 
-  int next = posFor(showRam ? ram : cpu);
+  int next = posFor(needle);
   if (abs(next - target) >= DEAD_ZONE || next == POS_MIN || next == POS_MAX) target = next;
 }
 
@@ -449,6 +637,12 @@ void printRow(uint8_t row, const char* text) {
   lcd.print(line);
 }
 
+void printRow(uint8_t row, const __FlashStringHelper* text) {
+  char line[17];
+  strlcpy_P(line, (const char*)text, sizeof(line));
+  printRow(row, line);
+}
+
 // Lamp test for the sweep: every pixel on.
 void showAllPixels() {
   char full[17];
@@ -456,6 +650,34 @@ void showAllPixels() {
   full[16] = '\0';
   printRow(0, full);
   printRow(1, full);
+}
+
+// "     14:37"; empty without the clock module.
+void timeRow(char* row) {
+  uint32_t t = localNow();
+  if (timeOk) snprintf_P(row, 17, PSTR("     %02u:%02u"), (unsigned)(t / 3600 % 24), (unsigned)(t / 60 % 60));
+  else row[0] = '\0';
+}
+
+// "Focus 2/4  24:13" / "Paused", or "Break time!" once a phase is over.
+void showPomodoro() {
+  char row[17], label[11];
+  if (pomoState == OVER) {
+    printRow(0, pomoPhase != FOCUS ? F("Focus time!") : longBreakNext() ? F("Long break time!") : F("Break time!"));
+  } else {
+    if (pomoPhase == LONG_BREAK) strcpy_P(label, PSTR("Long break"));
+    else snprintf_P(label, sizeof(label), PSTR("%S %u/%u"), pomoPhase == FOCUS ? PSTR("Focus") : PSTR("Break"),
+                    pomoCycle, settings.cycles);
+    unsigned long s = (pomoLeft() + 999) / 1000;
+    snprintf_P(row, sizeof(row), PSTR("%-10s %2lu:%02lu"), label, s / 60, s % 60);
+    printRow(0, row);
+  }
+  if (pomoState == PAUSED) {
+    printRow(1, F("Paused"));
+  } else {
+    timeRow(row);
+    printRow(1, row);
+  }
 }
 
 // Writing to the LCD blocks for a few ms, which could stall the motor mid-move,
@@ -474,7 +696,7 @@ void updateLcd() {
   // Off a minute after the last data, or when gauge.py sets 0. A press wakes it
   // anyway. gauge.py's brightness only while it sends data; full otherwise.
   static uint8_t backlight = 255;
-  bool on = sweep || (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
+  bool on = sweep || holding || pomo || (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
             millis() - wokeMs < WAKE_MS;
   uint8_t level = !on ? 0 : (sweep || brightness == 0 || !online()) ? 255 : brightness;
   if (level != backlight) {
@@ -497,9 +719,16 @@ void updateLcd() {
     }
     return;
   }
+  if (holding) {
+    printRow(0, holding == 2 ? F("Test") : pomo ? F("Exit pomodoro") : F("Start pomodoro"));
+    printRow(1, F(""));
+    return;
+  }
+  if (pomo) {
+    showPomodoro();
+    return;
+  }
 
-  const char* top = text[0][showRam];
-  char notice[17];
   if (clockMode()) {
     static const char DAYS[] = "SunMonTueWedThuFriSat";
     uint32_t t = localNow();
@@ -507,21 +736,15 @@ void updateLcd() {
     int16_t y;
     uint8_t m, d;
     civilFromDays(days, y, m, d);
-    char date[17];
-    snprintf(notice, sizeof(notice), "     %02u:%02u", (unsigned)(t / 3600 % 24), (unsigned)(t / 60 % 60));
-    snprintf(date, sizeof(date), " %.3s %02u/%02u/%d", DAYS + (days + 4) % 7 * 3, d, m, y);
-    printRow(0, notice);
-    printRow(1, date);
+    char row[17];
+    timeRow(row);
+    printRow(0, row);
+    snprintf(row, sizeof(row), " %.3s %02u/%02u/%d", DAYS + (days + 4) % 7 * 3, d, m, y);
+    printRow(1, row);
     return;
   }
-  if (millis() - switchedMs < NOTICE_MS) {
-    snprintf(notice, sizeof(notice), "Needle: %s", showRam ? "RAM" : "CPU");
-    top = notice;
-  } else if (!online()) {
-    top = "No data";
-  }
-  printRow(0, top);
-  printRow(1, online() ? text[1][showRam] : "");
+  printRow(0, online() ? text[0] : "No data");
+  printRow(1, online() ? text[1] : "");
 }
 
 // ----------------------------------------------------------------
@@ -532,7 +755,9 @@ void setup() {
   pinMode(COIL_B1, OUTPUT);
   pinMode(COIL_B2, OUTPUT);
   pinMode(LCD_LIGHT, OUTPUT);
+  pinMode(PIEZO, OUTPUT);
   pinMode(BUTTON, INPUT_PULLUP);
+  pinMode(POMODORO_BUTTON, INPUT_PULLUP);
   digitalWrite(LCD_LIGHT, HIGH);
   lcd.begin(16, 2);
   Serial.begin(115200);
@@ -542,21 +767,30 @@ void setup() {
   Zone z;
   EEPROM.get(ZONE_ADDR, z);
   if (z.magic == MAGIC) zone = z;
+  Settings st;
+  EEPROM.get(SETTINGS_ADDR, st);
+  if (st.magic == MAGIC) settings = st;
 
   delay(DEBOUNCE_MS);
   if (digitalRead(BUTTON) == LOW || !restoreParked()) {
+    if (digitalRead(BUTTON) == LOW) {
+      // Still held after the homing: its release must not count as a press
+      mainButton.raw = mainButton.down = mainButton.skip = true;
+    }
     lcd.print(F("Homing..."));
     fullHoming();
   }
   while (Serial.available()) Serial.read();  // drop anything sent during homing
-  Serial.println(F("READY"));
+  Serial.println(F("READY 2"));             // protocol version, checked by gauge.py
 }
 
 void loop() {
   readSerial();
-  readButton();
+  readButtons();
   updateClock();
+  updatePomodoro();
   updateTarget();
   updateMotor();
+  updatePiezo();
   updateLcd();
 }
