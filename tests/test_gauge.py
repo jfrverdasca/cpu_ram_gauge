@@ -11,6 +11,9 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "pc"))
 import gauge  # noqa: E402
+import lcd  # noqa: E402
+from plugins import Context, Plugin  # noqa: E402
+from plugins import email as email_plugin, status, system  # noqa: E402
 
 CPU, RAM = 20.0, 60.0
 
@@ -70,9 +73,10 @@ class FakeSerial:
         return data.decode().splitlines()
 
 
-def run_main(port, display_on=True, scans=None, **patches):
+def run_main(port, display_on=True, scans=None, plugins=None, **patches):
     """Runs gauge.main() on port with fixed readings; returns what it printed.
-    scans: a list that gets the time of every top apps scan."""
+    scans: a list that gets the time of every top apps scan. plugins: PLUGINS (by
+    default a fresh System and Status)."""
     def top_apps():
         if scans is not None:
             scans.append(port.elapsed())
@@ -82,13 +86,15 @@ def run_main(port, display_on=True, scans=None, **patches):
     memory = namedtuple("Memory", "percent")(RAM)
     with mock.patch.object(gauge.serial, "Serial", lambda *a, **k: port), \
             mock.patch.object(gauge, "find_port", lambda: "fake"), \
-            mock.patch.object(gauge.psutil, "cpu_percent", lambda *a, **k: CPU), \
-            mock.patch.object(gauge.psutil, "virtual_memory", lambda: memory), \
-            mock.patch.object(gauge, "top_apps", top_apps), \
+            mock.patch.object(system.psutil, "cpu_percent", lambda *a, **k: CPU), \
+            mock.patch.object(system.psutil, "virtual_memory", lambda: memory), \
+            mock.patch.object(system, "top_apps", top_apps), \
             mock.patch.object(gauge, "display_on", lambda: display_on), \
-            mock.patch.object(gauge.Network, "find_interface", lambda self: None), \
-            mock.patch.object(gauge.Network, "read", lambda self: None), \
-            mock.patch.multiple(gauge, **{"NOTICE": gauge.NOTICE, **patches}), \
+            mock.patch.object(gauge, "load_env", lambda: None), \
+            mock.patch.object(status.Network, "find_interface", lambda self: None), \
+            mock.patch.object(status.Network, "read", lambda self: None), \
+            mock.patch.multiple(gauge, **{"NOTICE": gauge.NOTICE, **patches,
+                                          "PLUGINS": plugins or [system.System(), status.Status()]}), \
             mock.patch.object(sys, "argv", ["gauge.py"]), \
             redirect_stdout(out):
         gauge.main()
@@ -112,7 +118,7 @@ class Helpers(unittest.TestCase):
 
     def test_setup_lines(self):
         lines = list(gauge.setup_lines(True))
-        self.assertEqual(sum(line.startswith("G") for line in lines), len(gauge.GLYPHS))
+        self.assertFalse(any(line.startswith("G") for line in lines))  # they go with the rows
         self.assertIn(f"M{gauge.POMODORO_FOCUS} {gauge.POMODORO_BREAK} "
                       f"{gauge.POMODORO_LONG_BREAK} {gauge.POMODORO_CYCLES}\n", lines)
         self.assertIn(f"S{gauge.BEEP_HZ} {gauge.BEEP_VOLUME}\n", lines)
@@ -120,16 +126,277 @@ class Helpers(unittest.TestCase):
         self.assertTrue(any(line.startswith("Z") for line in lines))
         self.assertIn("B0\n", list(gauge.setup_lines(False)))
 
-    def test_rows_by_mode(self):
-        net = gauge.Network()
-        args = (CPU, RAM, ("Code", 5.0), ("Firefox", 10.0), net, False, False)
-        cpu_rows = gauge.lcd_rows("C", *args)
-        ram_rows = gauge.lcd_rows("R", *args)
-        self.assertTrue(cpu_rows[0].startswith(f"{gauge.RAM_ICON} 60% Firefox"))
-        self.assertTrue(ram_rows[0].startswith(f"{gauge.CPU_ICON} 20% Code"))
-        # Past HOT, row 1 shows the app behind the needle
-        hot = gauge.lcd_rows("C", CPU, RAM, ("Code", 5.0), ("Firefox", 10.0), net, True, False)
-        self.assertEqual(hot[1], f"{gauge.APP_ICON} 5% Code")
+    def test_system_rows_by_needle(self):
+        p = system.System()
+        p.cpu, p.ram, p.top_cpu, p.top_ram = CPU, RAM, ("Code", 5.0), ("Firefox", 10.0)
+        cpu_rows = p.rows(Context(0, "CPU", False))
+        self.assertEqual(cpu_rows, (f"{system.RAM_ICON} 60% Firefox", None))
+        self.assertEqual(p.rows(Context(0, "RAM", False))[0], f"{system.CPU_ICON} 20% Code")
+        # Past hot, row 1 shows the app behind the needle
+        p.hot_cpu = p.fresh_cpu = True
+        self.assertEqual(p.rows(Context(0, "CPU", False))[1], f"{system.APP_ICON} 5% Code")
+
+    def test_app_names_fit_after_dropping_accents(self):
+        cafe = "Cafe\u0301 Cafe\u0301 Cafe\u0301"  # decomposed, as in macOS paths
+        self.assertEqual(system.metric_row("C", 5, cafe), "C 5% Cafe Cafe C")
+        self.assertEqual(system.metric_row("C", 5, "Word\u2122"), "C 5% WordTM")
+
+    def test_needles_of_the_base_class_are_read_only(self):
+        with self.assertRaises(TypeError):
+            Plugin().needles["X"] = lambda: 0
+
+    def test_load_env(self):
+        with mock.patch.dict(gauge.os.environ, {"B": "set"}, clear=True):
+            path = mock.Mock(read_text=lambda: '# comment\nA = "one # two" # note\nexport B=two\nC\n'
+                                               "D=pass#word # note\nE='x'")
+            gauge.load_env(path)
+            self.assertEqual(gauge.os.environ, {"A": "one # two", "B": "set", "D": "pass#word",
+                                                "E": "x"})  # set ones win
+
+
+class Rows(unittest.TestCase):
+    class Fixed(Plugin):
+        def __init__(self, rows):
+            self.fixed = rows
+            self.asked = 0
+
+        def rows(self, ctx):
+            self.asked += 1
+            return self.fixed
+
+    def test_first_plugin_with_text_wins_each_row(self):
+        top = self.Fixed((None, "mail"))
+        rest = self.Fixed(("cpu", "net"))
+        last = self.Fixed(("x", "y"))
+        rows = gauge.lcd_rows([top, rest, last], Context(0, "CPU", False))
+        self.assertEqual(rows, ["cpu", "mail"])
+        self.assertEqual(last.asked, 0)  # both rows taken: not asked
+        self.assertEqual(gauge.lcd_rows([top], None), ["", "mail"])
+
+    def test_lcd_text_has_no_accents(self):
+        self.assertEqual(lcd.ascii("João Ação ✓"), "Joao Acao ?")
+        icon = system.CPU_ICON
+        self.assertEqual(lcd.ascii(icon + " é"), icon + " e")
+
+    def test_fit_keeps_the_start_still(self):
+        text = "> " + "abcdefghijklmnopqrstuvwxyz"
+        start = time.monotonic()
+        self.assertEqual(lcd.fit(text, 2, since=start), "> abcdefghijklmn")
+        later = start - lcd.SCROLL_PAUSE - 3 * lcd.SCROLL_STEP  # 3 steps in
+        self.assertEqual(lcd.fit(text, 2, since=later), "> defghijklmnopq")
+        self.assertEqual(lcd.scroll_time("a" * 20, 16), 2 * lcd.SCROLL_PAUSE + 4 * lcd.SCROLL_STEP)
+        self.assertEqual(lcd.scroll_time("short"), 0)
+
+
+class Glyphs(unittest.TestCase):
+    def setUp(self):
+        self.icons = [lcd.glyph([f"{n:05b}".replace("0", ".").replace("1", "#")] * 8)
+                      for n in range(10)]
+
+    def test_loads_once_and_uses_the_slot_character(self):
+        g = lcd.Glyphs()
+        a, b = self.icons[:2]
+        lines, rows = g.place([a + " A", b + " B"], [None, None])
+        self.assertEqual([l[:2] for l in lines], ["G0", "G1"])
+        self.assertEqual(rows, [chr(8) + " A", chr(1) + " B"])  # slot 0 is chr(8)
+        lines, rows = g.place([b + " B", a + " A"], rows)
+        self.assertEqual(lines, [])
+        self.assertEqual(rows, [chr(1) + " B", chr(8) + " A"])
+
+    def test_keeps_slots_on_the_lcd_while_others_are_free(self):
+        g = lcd.Glyphs()
+        g.slots = self.icons[:8]
+        shown = [self.icons[0], self.icons[1]]
+        # The new rows need neither 0 nor 1: 2 is the first slot off the LCD
+        lines, _ = g.place([self.icons[8], ""], shown)
+        self.assertEqual(lines[0][:2], "G2")
+        # With every slot on the LCD, one the new rows don't need
+        lines, _ = g.place([self.icons[9], self.icons[8]], ["".join(self.icons[:8]), ""])
+        self.assertEqual([l[:2] for l in lines], ["G0"])
+
+    def test_past_8_the_rest_are_spaces(self):
+        g = lcd.Glyphs()
+        lines, rows = g.place(["".join(self.icons[:9]), ""], [None, None])
+        self.assertEqual(len(lines), 8)
+        self.assertEqual(rows[0][-1], " ")
+        g.reset()
+        self.assertEqual(g.slots, [None] * 8)
+
+
+class FakeIMAP:
+    """An IMAP server with one mailbox: mail is {uid: [sender, subject, seen]}."""
+
+    def __init__(self, mail):
+        self.mail = mail
+        self.searches = 0
+        self.uids = True  # FETCH answers say which UID
+
+    def __call__(self, host, timeout=None):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        pass
+
+    def login(self, user, password):
+        if password != "secret":
+            raise email_plugin.imaplib.IMAP4.error("AUTHENTICATIONFAILED")
+
+    def status(self, folder, items):
+        return "OK", [f"INBOX (UIDNEXT {max(self.mail, default=0) + 1} UIDVALIDITY 7)".encode()]
+
+    def select(self, folder, readonly=False):
+        assert readonly  # never marks anything read
+
+    def uid(self, command, *args):
+        if command == "SEARCH":
+            self.searches += 1
+            first = int(args[1].split()[-1].split(":")[0])
+            uids = [u for u in self.mail if u >= first] or [max(self.mail)]  # like n:*
+            return "OK", [" ".join(str(u) for u in uids if not self.mail[u][2]).encode()]
+        assert "PEEK" in args[1]
+        data = []
+        for u in map(int, args[0].split(",")):
+            sender, subject = self.mail[u][:2]
+            data += [(f"{u} ({f'UID {u} ' if self.uids else ''}BODY[HEADER] {{99}}".encode(),
+                      f"From: {sender}\r\nSubject: {subject}\r\n\r\n".encode()), b")"]
+        return "OK", data
+
+
+class EmailPlugin(unittest.TestCase):
+    def setUp(self):
+        self.mail = {1: ["Old <old@x.pt>", "Before the start", False]}
+        self.imap = FakeIMAP(self.mail)
+        patches = [mock.patch.object(email_plugin.imaplib, "IMAP4_SSL", self.imap),
+                   mock.patch.dict(email_plugin.os.environ, {
+                       "EMAIL_HOST": "imap.x.pt", "EMAIL_USER": "me", "EMAIL_PASSWORD": "secret"})]
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        self.now = time.monotonic()
+
+    def plugin(self, **options):
+        p = email_plugin.Email(**options)
+        with redirect_stdout(io.StringIO()):
+            p.start()
+            self.poll(p)  # the first only remembers where the mailbox is
+            p.collect()
+        return p
+
+    def poll(self, p):
+        p.update(Context(self.now, "CPU", False))
+        p.thread.join()
+
+    def rows(self, p, after=0):
+        self.now += after
+        return p.rows(Context(self.now, "CPU", False))
+
+    def test_shows_only_mail_after_the_start(self):
+        p = self.plugin()
+        self.assertEqual(self.rows(p), (None, None))
+        self.mail[2] = ["João Silva <joao@x.pt>", "Almoço", False]
+        self.poll(p)
+        icon = email_plugin.ENVELOPE_ICON
+        self.assertEqual(self.rows(p), (f"{icon} Joao Silva", "Almoco"))
+        self.assertEqual(self.rows(p, after=4.9)[1], "Almoco")
+        self.assertEqual(self.rows(p, after=0.2), (None, None))  # min_seconds, 5 s
+
+    def test_stays_until_the_longest_row_has_scrolled(self):
+        p = self.plugin(rows=(None, "{sender} - {subject}"))
+        self.mail[2] = ["<a_very_long_address@example.com>", "Test", False]
+        self.poll(p)
+        row = self.rows(p)[1]
+        self.assertEqual(row, "a_very_long_addr")
+        text = "a_very_long_address@example.com - Test"
+        seconds = lcd.scroll_time(text)
+        self.assertEqual(self.rows(p, after=seconds - 0.1)[0], None)
+        self.assertIsNotNone(self.rows(p)[1])
+        self.assertEqual(self.rows(p, after=0.2), (None, None))
+
+    def test_one_at_a_time_and_read_ones_go(self):
+        p = self.plugin()
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False],
+                          4: ["C <c@x.pt>", "Three", False]})
+        self.poll(p)
+        self.assertEqual(self.rows(p)[1], "One")
+        self.mail[3][2] = True  # read on the phone
+        self.poll(p)
+        self.assertEqual(self.rows(p, after=5.1)[1], "Three")
+        self.assertEqual(self.rows(p, after=5.1), (None, None))
+
+    def test_backlog_shows_the_newest_then_a_summary(self):
+        p = self.plugin()
+        for u in range(2, 9):
+            self.mail[u] = [f"S{u} <s@x.pt>", f"Mail {u}", False]
+        self.poll(p)
+        shown = [self.rows(p, after=5.1)[1] for _ in range(3)]
+        self.assertEqual(shown, ["Mail 6", "Mail 7", "Mail 8"])
+        self.assertEqual(self.rows(p, after=5.1), (f"{email_plugin.ENVELOPE_ICON} +4 emails", None))
+        self.assertEqual(self.rows(p, after=5.1), (None, None))
+
+    def test_nothing_new_doesnt_search(self):
+        p = self.plugin()
+        self.poll(p)
+        self.assertEqual(self.imap.searches, 0)
+
+    def test_resume_shows_it_again_from_the_start(self):
+        p = self.plugin()
+        self.mail[2] = ["A <a@x.pt>", "One", False]
+        self.poll(p)
+        self.rows(p)
+        p.resume()  # a Pomodoro started 1 s in
+        self.assertEqual(self.rows(p, after=600)[1], "One")
+        self.assertEqual(self.rows(p, after=4.9)[1], "One")
+
+    def test_errors_are_printed_once(self):
+        p = self.plugin()
+        email_plugin.os.environ["EMAIL_PASSWORD"] = "wrong"
+        p.start()
+        out = io.StringIO()
+        with redirect_stdout(out):
+            for _ in range(3):
+                self.poll(p)
+                self.rows(p)
+        self.assertEqual(out.getvalue().count("AUTHENTICATIONFAILED"), 1)
+
+    def test_a_poll_ending_meanwhile_is_taken_in_first(self):
+        p = self.plugin()
+        self.mail[2] = ["A <a@x.pt>", "One", False]
+        result = email_plugin.fetch("h", "u", "secret", "INBOX", p.last, p.validity, float("inf"), 3)
+
+        class Ending:  # the poll ends just as update() looks
+            def is_alive(self):
+                p.result = result
+                return False
+
+        p.thread = Ending()
+        with mock.patch.object(email_plugin, "fetch", wraps=email_plugin.fetch) as fetch:
+            self.poll(p)
+        self.assertEqual(fetch.call_args[0][4], 2)  # from the new last UID
+        self.assertEqual(self.rows(p)[1], "One")
+        self.assertEqual(self.rows(p, after=5.1), (None, None))  # once
+
+    def test_a_message_without_uid_is_skipped(self):
+        p = self.plugin()
+        self.imap.uids = False
+        self.mail[2] = ["A <a@x.pt>", "One", False]
+        self.poll(p)
+        self.assertEqual(self.rows(p), (None, None))
+        self.assertIsNone(p.error)
+        self.assertEqual(p.last, 2)  # moves on anyway
+
+    def test_off_without_an_account(self):
+        del email_plugin.os.environ["EMAIL_PASSWORD"]
+        p = email_plugin.Email()
+        out = io.StringIO()
+        with redirect_stdout(out):
+            p.start()
+        self.assertIn("Email off", out.getvalue())
+        p.update(Context(self.now, "CPU", False))
+        self.assertIsNone(p.thread)
+        self.assertEqual(self.rows(p), (None, None))
 
 
 class Main(unittest.TestCase):
@@ -138,8 +405,10 @@ class Main(unittest.TestCase):
         run_main(port)
         lines = port.lines()
         self.assertEqual(lines[0], f"N{CPU:.1f}")  # the needle at once
-        settings = [line for line in lines if line[:1] in ("G", "M", "S", "B", "Z")]  # one per reading
-        self.assertEqual(len(settings), len(gauge.GLYPHS) + 4)  # once
+        settings = [line for line in lines if line[:1] in ("M", "S", "B", "Z")]  # one per reading
+        self.assertEqual(len(settings), 4)  # once
+        glyphs = [line for line in lines if line.startswith("G")]
+        self.assertEqual(len(glyphs), 3)  # the rows' icons: RAM, power, down arrow
         self.assertTrue(any(line.startswith("T0") for line in lines))
         self.assertTrue(any(line.startswith("T1") for line in lines))
 
@@ -157,7 +426,7 @@ class Main(unittest.TestCase):
         run_main(port, NOTICE=0.5)
         rows = [line for line in port.lines() if line.startswith("T0")]
         self.assertEqual(rows[-2], "T0Needle: RAM")
-        self.assertTrue(rows[-1].startswith(f"T0{gauge.CPU_ICON}"))  # RAM on the needle, CPU on the LCD
+        self.assertTrue(rows[-1].endswith(f" {CPU:.0f}% Firefox"))  # RAM on the needle, CPU on the LCD
 
     def test_rows_go_only_when_they_change(self):
         port = FakeSerial(duration=1.0)
@@ -217,8 +486,16 @@ class Main(unittest.TestCase):
     def test_reconnecting_ends_the_pomodoro(self):
         # The Arduino restarts when the port opens again, which ends its Pomodoro
         port = FakeSerial(events=[(0.5, b"POMODORO ON\n")], drop_at=1.0, duration=4.5)
-        output = run_main(port)
+        resumed = []
+
+        class Recorder(Plugin):
+            def resume(self):
+                resumed.append(port.elapsed())
+
+        output = run_main(port, plugins=[system.System(), status.Status(), Recorder()])
         self.assertIn("device disconnected", output)
+        self.assertEqual(len(resumed), 1)  # as after POMODORO OFF
+        self.assertGreater(resumed[0], 1.0)
         after = port.lines(3.0)
         self.assertGreater(sum(line.startswith("N") for line in after), 10)  # 20 a second
         self.assertIn("T0", [line[:2] for line in after])

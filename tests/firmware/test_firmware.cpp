@@ -248,62 +248,54 @@ TEST(pomodoro_needle_runs_from_100_to_0) {
   CHECK(lcd.text(0) == "Break time!");
 }
 
-TEST(pomodoro_phases_wait_for_the_button) {
+TEST(pomodoro_phases_wait_for_a_click) {
   startPomodoro("M1 1 2 2");
   run(61000);
   CHECK(lcd.text(0) == "Break time!");
   run(10000);
   CHECK(pomoState == OVER);     // waits
-  hold(POMODORO_BUTTON, 200);
-  run(500);
+  hold(BUTTON, 200);
+  run(1000);                    // the LCD waits for the needle to reach 100%
   CHECK(lcd.text(0).rfind("Break 1/2", 0) == 0);
   run(61000);
   CHECK(lcd.text(0) == "Focus time!");
-  hold(POMODORO_BUTTON, 200);
-  run(500);
+  hold(BUTTON, 200);
+  run(1000);
   CHECK(lcd.text(0).rfind("Focus 2/2", 0) == 0);
   run(61000);
   CHECK(lcd.text(0) == "Long break time!");
-  hold(POMODORO_BUTTON, 200);
-  run(500);
+  hold(BUTTON, 200);
+  run(1000);
   CHECK(lcd.text(0).rfind("Long break  ", 0) == 0);
   run(121000);
   CHECK(lcd.text(0) == "Focus time!");
-  hold(POMODORO_BUTTON, 200);
-  run(500);
+  hold(BUTTON, 200);
+  run(1000);
   CHECK(lcd.text(0).rfind("Focus 1/2", 0) == 0);
 }
 
-TEST(pomodoro_button_pauses_and_resumes) {
+TEST(click_pauses_and_resumes_the_pomodoro) {
   startPomodoro("M5 1 1 4");
   run(10000);
-  hold(POMODORO_BUTTON, 200);
+  hold(BUTTON, 200);
   CHECK(pomoState == PAUSED);
   unsigned long left = pomoLeft();
   run(20000);
   CHECK(pomoLeft() == left);
   CHECK(lcd.text(1) == "Paused");
-  hold(POMODORO_BUTTON, 200);
+  hold(BUTTON, 200);
   CHECK(pomoState == RUNNING);
   run(5000);
   CHECK(pomoLeft() < left);
 }
 
-TEST(pomodoro_button_does_nothing_outside_the_pomodoro) {
-  boot();
-  feed = "N50";
-  run(500);
-  hold(POMODORO_BUTTON, 200);
-  CHECK(!pomo);
-  CHECK(!printed("CLICK"));
-}
-
-TEST(pomodoro_ignores_clicks_and_the_script) {
+TEST(pomodoro_ignores_the_script) {
   startPomodoro("M1 1 1 4");
   send("T0Hello");
   run(2000);
   hold(BUTTON, 300);
-  CHECK(!printed("CLICK"));
+  CHECK(!printed("CLICK"));     // the click paused it instead
+  CHECK(pomoState == PAUSED);
   CHECK(abs(pos - pomoPos()) <= 1);   // the Pomodoro's, not the script's 30%
   CHECK(pos > posFor(90));
   CHECK(lcd.text(0).rfind("Focus", 0) == 0);

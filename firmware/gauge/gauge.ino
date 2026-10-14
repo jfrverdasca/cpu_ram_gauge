@@ -11,16 +11,15 @@
 // Output: "READY 2" at boot, "PARKED", "CLICK", "POMODORO ON"/"POMODORO OFF", "TEST".
 //
 // Button, acting on release (the LCD shows what releasing will do while held):
-// < 1 s sends "CLICK"; 1-3 s enters or leaves the Pomodoro; >= 3 s lamp test: a
-// 0 -> 100 -> 0 sweep, 1 s at the top and 1 s at the bottom, every LCD pixel on and a
-// beep.
+// < 1 s sends "CLICK", or in the Pomodoro starts/pauses it or starts the next phase;
+// 1-3 s enters or leaves the Pomodoro; >= 3 s lamp test: a 0 -> 100 -> 0 sweep, 1 s at
+// the top and 1 s at the bottom, every LCD pixel on and a beep.
 // Hold it while powering up to force a full homing (that release is ignored).
-// Pomodoro button: start/pause, or the next phase once one is over.
 //
 // Pomodoro: focus, break, long break after every few focus sessions. The needle runs
 // from 100% to 0% as each phase's time runs out; at the end the piezo beeps and the
-// next phase waits for the Pomodoro button. Clicks and gauge.py's needle and text are
-// ignored meanwhile.
+// next phase waits for a click. gauge.py's needle and text are ignored meanwhile, and
+// clicks don't reach it.
 //
 // With no data for 5 s (or on "P") the needle parks at 0% and its position is saved
 // to EEPROM, so the next boot doesn't need to grind against the end stop. After a
@@ -47,7 +46,6 @@ const uint8_t COIL_A2 = 3;
 const uint8_t COIL_B1 = 8;
 const uint8_t COIL_B2 = 9;
 const uint8_t BUTTON = 4;       // to GND
-const uint8_t POMODORO_BUTTON = 11;  // to GND
 const uint8_t PIEZO = 13;       // passive piezo, driven from Timer2 (bit 5 of PORTB)
 const uint8_t LCD_RS = 7;
 const uint8_t LCD_E = 12;       // LCD D4-D7 on A0-A3, RW to GND
@@ -100,7 +98,7 @@ struct Settings { uint8_t focus, brk, longBrk, cycles; uint16_t hz; uint8_t volu
 const int SETTINGS_ADDR = 12;   // EEPROM, after the zone
 
 enum PomoPhase : uint8_t { FOCUS, BREAK, LONG_BREAK };
-enum PomoState : uint8_t { RUNNING, PAUSED, OVER };   // OVER: waits for the button
+enum PomoState : uint8_t { RUNNING, PAUSED, OVER };   // OVER: waits for a click
 
 struct Button { uint8_t pin; bool raw, down, skip; unsigned long changedMs, pressedMs; };
 
@@ -122,7 +120,7 @@ bool parked = false;            // EEPROM holds the current position
 // 5 = at the bottom
 uint8_t sweep = 0;
 unsigned long sweepMs = 0;      // reached the top or the bottom
-Button mainButton = {BUTTON}, pomoButton = {POMODORO_BUTTON};
+Button mainButton = {BUTTON};
 uint8_t holding = 0;            // main button held: 0 = no, 1 = Pomodoro, 2 = lamp test
 unsigned long wokeMs = 0;       // last press that woke the LCD
 bool screenOn = true;
@@ -420,8 +418,8 @@ void togglePomodoro() {
   Serial.println(pomo ? F("POMODORO ON") : F("POMODORO OFF"));
 }
 
-void pomodoroButton() {
-  if (!pomo) return;
+// A click in the Pomodoro: pause, resume, or start the next phase once one is over.
+void pomodoroClick() {
   if (pomoState == RUNNING) {
     pomoLeftMs = pomoLeft();
     pomoState = PAUSED;
@@ -565,13 +563,12 @@ void readButtons() {
     if (b.skip) b.skip = false;   // the press that forced the homing
     else if (held >= TEST_PRESS_MS) startTest();
     else if (held >= POMODORO_PRESS_MS) togglePomodoro();
+    else if (pomo) pomodoroClick();
     else if (!screenOn) wokeMs = millis();
-    else if (!pomo && scriptRunning()) Serial.println(F("CLICK"));
+    else if (scriptRunning()) Serial.println(F("CLICK"));
   }
   unsigned long held = millis() - b.pressedMs;
   holding = !b.down || b.skip ? 0 : held >= TEST_PRESS_MS ? 2 : held >= POMODORO_PRESS_MS ? 1 : 0;
-
-  if (debounce(pomoButton) && pomoButton.down) pomodoroButton();
 }
 
 // ---------------------------------------------------------------- logic
@@ -756,7 +753,6 @@ void setup() {
   pinMode(LCD_LIGHT, OUTPUT);
   pinMode(PIEZO, OUTPUT);
   pinMode(BUTTON, INPUT_PULLUP);
-  pinMode(POMODORO_BUTTON, INPUT_PULLUP);
   digitalWrite(LCD_LIGHT, HIGH);
   lcd.begin(16, 2);
   Serial.begin(115200);

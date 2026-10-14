@@ -222,7 +222,7 @@ line(NX, y, 470, y, SIG["io"])
 button_h(400, 470, y, SIG["io"])
 line(400, y, 370, y, SIG["io"])
 gndh(370, y, -1)
-text(435, y + 22, "CPU/RAM button", 12, "middle")
+text(435, y + 22, "button", 12, "middle")
 text(435, y + 37, "(INPUT_PULLUP, to GND)", 11, "middle", c="#475569")
 # warnings
 for y, pin in ((660, "D5"), (720, "D6")):
@@ -236,13 +236,6 @@ text(270, 693, "warning lights", 12, "end")
 text(270, 708, "(salvaged LEDs)", 11, "end", c="#475569")
 # future
 y = 800
-pin_label(NX + 8, y, "D11", "start", SIG["future"])
-line(NX, y, 470, y, SIG["future"], dash=True)
-button_h(400, 470, y, SIG["future"], dash=True)
-line(400, y, 370, y, SIG["future"], dash=True)
-gndh(370, y, -1)
-text(435, y + 22, "Pomodoro button (future)", 12, "middle", c=SIG["future"])
-y = 860
 pin_label(NX + 8, y, "D13", "start", SIG["future"])
 line(NX, y, 440, y, SIG["future"], dash=True)
 add(f'<rect x="400" y="{y - 12}" width="40" height="24" rx="12" fill="white" stroke="{SIG["future"]}" stroke-width="2"/>')

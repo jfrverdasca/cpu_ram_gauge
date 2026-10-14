@@ -112,7 +112,6 @@ pads("lighting", light, "none")
 pads("warnings", [((XR + 3, r(6)), "W2", "D6"), ((XR + 3, r(7)), "W1", "D5"),
                   ((XR + 3, r(8)), "GND", "GND")], "right")
 pads("button", [((XR + 1, r(8)), "D4", "D4"), ((XR + 1, r(9)), "GND", "GND")], "right")
-pads("Pomodoro", [((XR + 1, t(3)), "D11", "D11"), ((XR + 1, t(4)), "GND", "GND")], "right")
 pads("piezo", [((XL - 2, r(0)), "D13", "D13"), ((XL - 2, r(1)), "GND", "GND")], "left")
 pads("RTC", [((XL - 2, r(7)), "A4", "SDA"), ((XL - 2, r(8)), "A5", "SCL"),
              ((XL - 2, r(9)), "GND", "GND"), ((XL - 2, r(10)), "5V", "VCC")], "left")
@@ -162,7 +161,6 @@ traces = [
     ("BASE", [(XR + 6, t(2)), (XR + 6, t(4))]),
     ("COLL", [(XR + 5, t(3)), (XR + 5, t(1)), (XD + 5, t(1))]),
     # future
-    ("D11", [(XR, r(1)), (XR + 1, r(1)), (XR + 1, t(3))]),
     ("D13", [(XL, r(0)), (XL - 2, r(0))]),
     ("A4", [(XL, r(7)), (XL - 2, r(7))]),
     ("A5", [(XL, r(8)), (XL - 2, r(8))]),
@@ -220,7 +218,7 @@ for n in ("D10", "BASE", "COLL"):
     NET_KIND[n] = COLOURS["light"]
 for n in ("D4", "D5", "D6", "W1", "W2"):
     NET_KIND[n] = COLOURS["io"]
-for n in ("D11", "D13", "A4", "A5"):
+for n in ("D13", "A4", "A5"):
     NET_KIND[n] = COLOURS["future"]
 
 out = []
@@ -370,7 +368,7 @@ def nano_labels(pn):
 def group_titles(pn):
     spots = {"LCD": (XP, t(2.6), "middle"), "motor": (XO + 2.4, r(2.3), "middle"),
              "lighting": (XD + 3.5, t(2.6), "middle"), "warnings": (XR + 4.6, r(5.2), "middle"),
-             "button": (XR + 1.6, r(10.2), "middle"), "Pomodoro": (XR + 1, t(5.6), "middle"),
+             "button": (XR + 1.6, r(10.2), "middle"),
              "piezo": (XL - 2.5, t(0.6), "middle"), "RTC": (XL - 2, r(6.5), "middle")}
     for title, (x, y, anchor) in spots.items():
         cx, cy = pn.xy(x, y)
@@ -431,7 +429,7 @@ notes = [
         "Each LED with its own 150 Ω, soldered at the LED.",
         "Motor: B1/B2/A1/A2 = the wire that was on D8/D9/D2/D3 in the bench test.",
         "Warnings: LED + to D5/D6 (330 Ω on the board), − to GND. Button: D4 and GND.",
-        "Future: Pomodoro button (D11), piezo (D13), RTC (A4 SDA, A5 SCL).",
+        "Future: piezo (D13), RTC (A4 SDA, A5 SCL).",
     ]),
     ("Then", [
         "Electrolytic caps: + on 5V (marked +), stripe on GND. 3296W trimpot: bend the legs if they are staggered.",

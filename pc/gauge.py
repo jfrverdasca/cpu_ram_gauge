@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Drive the Arduino needle gauge over serial: CPU or RAM usage on the needle.
+"""Drive the Arduino needle gauge over serial: what the needle and the LCD show comes
+from the plugins in PLUGINS (pc/plugins/), CPU or RAM usage by default.
 
 The Arduino is only the physical part; this script decides what it shows. The needle
 goes as "N45.3" every reading (also the sign the script is alive), the LCD rows as
-"T<row><text>" when they change. Custom LCD characters are sent as "G<slot><8 rows
-in hex>", the backlight as "B<0-255>", the Pomodoro minutes as "M<focus> <break>
-<long break> <cycles>", the piezo as "S<Hz> <volume>" and the time for the Arduino's
-clock module as "Z<UTC seconds> <standard offset, minutes> <0/1>": on connecting and
-whenever the Arduino says READY (it restarted). A click on the Arduino's button
-("CLICK") switches the needle to the next of MODES. Change lcd_rows() and GLYPHS to
-show something else. While the Arduino runs the Pomodoro ("POMODORO ON") only a
-slow needle goes, so it doesn't park when the Pomodoro ends.
+"T<row><text>" when they change, with the custom characters they use as "G<slot><8
+rows in hex>". The backlight goes as "B<0-255>", the Pomodoro minutes as "M<focus>
+<break> <long break> <cycles>", the piezo as "S<Hz> <volume>" and the time for the
+Arduino's clock module as "Z<UTC seconds> <standard offset, minutes> <0/1>": on
+connecting and whenever the Arduino says READY (it restarted). A click on the
+Arduino's button ("CLICK") switches the needle to the next of the plugins' needles.
+While the Arduino runs the Pomodoro ("POMODORO ON") only a slow needle goes, so it
+doesn't park when the Pomodoro ends; the plugins rest.
 
 While the computer's screen is asleep (macOS and Linux) it parks the needle and
 turns the LCD off.
@@ -26,35 +27,36 @@ import ctypes
 import ctypes.util
 import glob
 import os
-import re
 import shutil
 import signal
-import socket
 import subprocess
 import sys
 import time
-from collections import defaultdict, deque
+from collections import deque
 from pathlib import Path
 
-import psutil
 import serial
 from serial.tools import list_ports
+
+import lcd
+from plugins import Context
+from plugins.email import Email
+from plugins.status import Status
+from plugins.system import System
 
 # ---------------------------------------------------------------- settings
 # Safe to change.
 
+# What the needle and the LCD show. A click moves the needle to the next of the
+# plugins' needles, in this order (System: CPU, then RAM). Each LCD row shows the
+# first plugin here with something for it. Each plugin's options are in its file.
+PLUGINS = [
+    Email(rows=("{icon} {sender}", "{subject}")),  # or rows=(None, "{sender} - {subject}")
+    System(),
+    Status(),
+]
 BRIGHTNESS = 128      # LCD backlight, 1-255
-MODES = ["C", "R"]    # what the needle shows, in click order: C = CPU, R = RAM
 NOTICE = 3            # seconds "Needle: RAM" stays on row 0 after a click
-ALPHA = 0.04          # CPU smoothing: s = s*0.96 + new*0.04 (~1.2 s time constant)
-# Needle metric % from which row 1 shows the app using the most of it, and below
-# which it goes back, so the row doesn't flicker. RAM higher: macOS sits at 60-70%.
-HOT = {"C": (60, 50), "R": (80, 75)}
-APPS_INTERVAL = 5     # seconds between top app scans (a scan costs ~15 ms of CPU)
-HOT_APPS_INTERVAL = 1 # ... while CPU or RAM is past HOT, so the app on row 1 keeps up
-NET_INTERVAL = 1      # seconds between network speed readings (~70 us each)
-SCROLL_STEP = 0.5     # seconds per character when an app name doesn't fit (2 text updates)
-SCROLL_PAUSE = 2      # seconds still at each end
 
 # Pomodoro, run by the Arduino (also without this script); saved there
 POMODORO_FOCUS = 25       # minutes, 1-99
@@ -64,80 +66,19 @@ POMODORO_CYCLES = 4       # focus sessions before the long break, 1-9
 BEEP_HZ = 2000            # piezo tone, 1000-5000
 BEEP_VOLUME = 50          # 0 (silent) - 100
 
-# Custom 5x8 LCD characters, top row first. In text, slot n is chr(n), except slot 0,
-# which is chr(8): code 0 would end the line on the Arduino, and the LCD repeats
-# slots 0-7 at codes 8-15. Don't use 8 + n for the others: 10 and 13 are \n and \r.
-GLYPHS = [
-    [".#.#.",   # 0: CPU chip
-     "#####",
-     "#...#",
-     "#.#.#",
-     "#...#",
-     "#####",
-     ".#.#.",
-     "....."],
-    [".....",   # 1: RAM module, contacts at the bottom
-     "#####",
-     "#...#",
-     "#...#",
-     "#####",
-     "#.#.#",
-     "#.#.#",
-     "....."],
-    [".....",   # 2: power symbol, for uptime
-     "..#..",
-     ".###.",
-     "#.#.#",
-     "#.#.#",
-     "#...#",
-     ".###.",
-     "....."],
-    ["..#..",   # 3: down arrow
-     "..#..",
-     "..#..",
-     "..#..",
-     "#.#.#",
-     ".###.",
-     "..#..",
-     "....."],
-    ["..#..",   # 4: up arrow
-     ".###.",
-     "#.#.#",
-     "..#..",
-     "..#..",
-     "..#..",
-     "..#..",
-     "....."],
-    [".....",
-     "#####",   # 5: app window, for an app's own share (the others are the PC's total)
-     "#####",
-     "#...#",
-     "#...#",
-     "#...#",
-     "#####",
-     "....."],
-]
-CPU_ICON = chr(8)  # or "C" for a plain letter
-RAM_ICON = chr(1)  # or "R"
-UPTIME_ICON = chr(2)
-DOWN_ICON = chr(3)
-UP_ICON = chr(4)
-APP_ICON = chr(5)
-
 # ---------------------------------------------------------------- internals
 
 PROTOCOL = b"2"       # what the firmware must say in READY
 BAUD = 115200
 INTERVAL = 0.05       # seconds between readings
 # ... while the Arduino runs the Pomodoro: it ignores the needle then, which only
-# keeps it from parking when the Pomodoro ends. No apps, network or text meanwhile
+# keeps it from parking when the Pomodoro ends. No plugins or text meanwhile
 POMODORO_INTERVAL = 0.25
 READY_WAIT = 10       # the Arduino resets when the port opens and may home
-CHECK_INTERVAL = 5    # seconds between screen and network interface checks
+CHECK_INTERVAL = 5    # seconds between screen checks
 CLOCK_INTERVAL = 3600 # seconds between clock syncs
 TEXT_INTERVAL = 0.25  # seconds between LCD text updates
-LCD_WIDTH = 16
-NAMES = {"C": "CPU", "R": "RAM"}
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"  # settings kept out of git
 
 # Arduino, Arduino.org, CH340, FTDI, CP210x
 KNOWN_VIDS = {0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4}
@@ -191,173 +132,6 @@ def park(s):
     return None
 
 
-_denied = set()  # system processes need root: skip them on later scans
-_cores = psutil.cpu_count() or 1  # None when it can't tell
-_ram_total = psutil.virtual_memory().total
-
-
-def app_name(p):
-    """The app a process belongs to. On macOS, the outermost .app bundle, so helper
-    and content processes ("plugin-container" inside Firefox.app) count towards
-    their app; outside a bundle, the command it was started as ("claude", not its
-    binary named after the version)."""
-    if sys.platform != "darwin":
-        return p.name()
-    bundle = re.search(r"/([^/]+)\.app/", p.exe())
-    if bundle:
-        return bundle.group(1)
-    cmd = p.cmdline()
-    return os.path.basename(cmd[0]) if cmd else p.name()
-
-
-def top_apps():
-    """(name, % of the total) of the apps using the most CPU and RAM, leaving out
-    this script. A process counts towards its app (app_name())."""
-    cpu, ram = defaultdict(float), defaultdict(int)
-    denied = set()
-    for p in psutil.process_iter():
-        if p in _denied:
-            denied.add(p)
-            continue
-        if p.pid == os.getpid():
-            continue
-        try:
-            with p.oneshot():
-                name, c, m = app_name(p), p.cpu_percent(), p.memory_info().rss
-        except psutil.AccessDenied:
-            denied.add(p)
-            continue
-        except psutil.NoSuchProcess:
-            continue
-        if not name:
-            continue
-        cpu[name] += c
-        ram[name] += m
-    _denied.clear()  # forget the ones that ended
-    _denied.update(denied)
-    top_cpu = max(cpu, key=cpu.get, default="")
-    top_ram = max(ram, key=ram.get, default="")
-    # A process's CPU % is of one core (0-800% with 8): scale it to the whole machine
-    return ((top_cpu, cpu.get(top_cpu, 0) / _cores),
-            (top_ram, ram.get(top_ram, 0) / _ram_total * 100))
-
-
-def scroll(text, width):
-    """The part of text to show now: slides left when it doesn't fit, pausing at
-    each end."""
-    extra = len(text) - width
-    if extra <= 0:
-        return text
-    t = time.monotonic() % (2 * SCROLL_PAUSE + extra * SCROLL_STEP)
-    shift = min(extra, max(0, int((t - SCROLL_PAUSE) / SCROLL_STEP)))
-    return text[shift:shift + width]
-
-
-def metric_row(icon, value, app):
-    # "C 5% Code", "C 72% Code": low values leave more room for the name
-    row = f"{icon} {value:.0f}% "
-    return row + scroll(app, LCD_WIDTH - len(row))
-
-
-def hot(needle, value, was):
-    """Whether the needle's metric is past HOT: on from its first value, off below
-    the second."""
-    on, off = HOT[needle]
-    return value >= (off if was else on)
-
-
-def uptime():
-    # "03:26h" (hours:minutes), or "02:05d" (days:hours) after a day
-    m = int(time.time() - psutil.boot_time()) // 60
-    d, h, m = m // 1440, m // 60 % 24, m % 60
-    return f"{d:02d}:{h:02d}d" if d else f"{h:02d}:{m:02d}h"
-
-
-def rate(bps):
-    """Bytes per second in at most 4 characters: "0.3K", "12K", "345K", "1.2M"."""
-    for unit in "KMG":
-        bps /= 1000
-        if bps < 9.95:
-            return f"{bps:.1f}{unit}"
-        if bps < 999.5:
-            return f"{bps:.0f}{unit}"
-    return f"{bps:.0f}G"
-
-
-def net_interface():
-    """Name of the interface that traffic to the internet goes through, None when
-    offline. The same on every OS, unlike interface names. A UDP connect only picks
-    the route: nothing is sent."""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.connect(("1.1.1.1", 53))
-            ip = sock.getsockname()[0]
-    except OSError:
-        return None
-    for name, addrs in psutil.net_if_addrs().items():
-        if any(a.address == ip for a in addrs):
-            return name
-    return None
-
-
-class Network:
-    """Download and upload speed of the internet interface, in bytes per second.
-    None while offline and until the second reading after a change of interface."""
-
-    def __init__(self):
-        self.iface = self.last = self.down = self.up = None
-
-    def find_interface(self):
-        iface = net_interface()
-        if iface != self.iface:
-            self.iface = iface
-            self.last = self.down = self.up = None
-
-    def read(self):
-        c = psutil.net_io_counters(pernic=True).get(self.iface) if self.iface else None
-        now = time.monotonic()
-        if c and self.last:
-            t, recv, sent = self.last
-            self.down = max(0, c.bytes_recv - recv) / (now - t)
-            self.up = max(0, c.bytes_sent - sent) / (now - t)
-        else:
-            self.down = self.up = None
-        self.last = (now, c.bytes_recv, c.bytes_sent) if c else None
-
-    def text(self):
-        """The faster direction only, for lack of space; download on a tie."""
-        if self.down is None:
-            return DOWN_ICON + "--"
-        if self.up > self.down:
-            return UP_ICON + rate(self.up)
-        return DOWN_ICON + rate(self.down)
-
-
-def lcd_rows(mode, cpu, ram, top_cpu, top_ram, net, cpu_app, ram_app):
-    """The two LCD rows while the needle shows mode. The first row shows the metric
-    the needle isn't; the second, uptime and network, or with cpu_app / ram_app the
-    app behind the needle and its own share. top_cpu and top_ram are (name, % of
-    the total)."""
-    # "⏻ 03:26h   ↓1.2M": the faster of download/upload right-aligned
-    left = f"{UPTIME_ICON} {uptime()}"
-    bottom = left + net.text().rjust(LCD_WIDTH - len(left))
-    # An app's share can't pass the total: summed RSS counts shared pages once per
-    # process, and the share is from the last scan, up to APPS_INTERVAL ago
-    top_cpu = top_cpu[0], min(top_cpu[1], cpu)
-    top_ram = top_ram[0], min(top_ram[1], ram)
-    if mode == "C":
-        return (metric_row(RAM_ICON, ram, top_ram[0]),
-                metric_row(APP_ICON, top_cpu[1], top_cpu[0]) if cpu_app and top_cpu[0] else bottom)
-    return (metric_row(CPU_ICON, cpu, top_cpu[0]),
-            metric_row(APP_ICON, top_ram[1], top_ram[0]) if ram_app and top_ram[0] else bottom)
-
-
-def glyph_lines():
-    for slot, rows in enumerate(GLYPHS):
-        bits = "".join(f"{int(row.replace('#', '1').replace('.', '0'), 2):02X}" for row in rows)
-        yield f"G{slot}{bits}\n"
-
-
 def clock_line():
     """UTC time and the local zone, for the clock shown with no data. The Arduino
     applies summer time with the EU rule when the zone has it."""
@@ -365,13 +139,12 @@ def clock_line():
 
 
 def text_line(row, text):
-    # ASCII only: the LCD has no accents
-    return f"T{row}{text.encode('ascii', 'replace').decode()[:LCD_WIDTH]}\n"
+    return f"T{row}{text[:lcd.WIDTH]}\n"
 
 
 def setup_lines(awake):
-    """Everything the Arduino keeps: sent on connecting and when it restarts."""
-    yield from glyph_lines()
+    """Everything the Arduino keeps, but the custom characters (they go with the
+    rows): sent on connecting and when it restarts."""
     yield f"M{POMODORO_FOCUS} {POMODORO_BREAK} {POMODORO_LONG_BREAK} {POMODORO_CYCLES}\n"
     yield f"S{BEEP_HZ} {BEEP_VOLUME}\n"
     yield f"B{BRIGHTNESS if awake else 0}\n"
@@ -403,6 +176,35 @@ def on_signal(signum, frame):
     raise KeyboardInterrupt
 
 
+def load_env(path=ENV_FILE):
+    """KEY=value lines from path into the environment; variables already set win.
+    A value may be quoted; unquoted, " #" starts a comment."""
+    try:
+        lines = path.read_text().splitlines()
+    except FileNotFoundError:
+        return
+    for line in lines:
+        key, sep, value = line.partition("=")
+        key = key.strip().removeprefix("export ").strip()
+        if not sep or not key or key.startswith("#"):
+            continue
+        value = value.strip()
+        end = value.find(value[:1], 1) if value[:1] in ("\"", "'") else -1
+        value = value[1:end] if end > 0 else value.partition(" #")[0].rstrip()
+        os.environ.setdefault(key, value)
+
+
+def lcd_rows(plugins, ctx):
+    """Each row from the first plugin with something for it; empty if none. Plugins
+    after both rows are taken aren't asked, so what they'd show waits."""
+    rows = [None, None]
+    for p in plugins:
+        rows = [mine if row is None else row for row, mine in zip(rows, p.rows(ctx))]
+        if None not in rows:
+            break
+    return [lcd.ascii(row or "") for row in rows]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--port", help="serial port (default: auto-detect)")
@@ -414,25 +216,33 @@ def main():
     if hasattr(signal, "SIGHUP") and signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
         signal.signal(signal.SIGHUP, on_signal)
 
-    psutil.cpu_percent()  # the first reading is always 0
-    top_apps()            # same for each process
-    time.sleep(INTERVAL)
-    cpu = psutil.cpu_percent()
-    mode = MODES[0]
+    load_env()
+    needles = {name: value for p in PLUGINS for name, value in p.needles.items()}
+    if not needles:
+        sys.exit("No plugin in PLUGINS has a needle")
+    names = list(needles)
+    mode = names[0]
+    for p in PLUGINS:
+        p.start()
+    time.sleep(INTERVAL)  # psutil's first readings are always 0
+
     notice_until = 0      # "Needle: ..." on row 0 until then
-    next_check = next_scan = next_text = next_net = next_clock = 0
+    next_check = next_text = next_clock = 0
+    due = dict.fromkeys(PLUGINS, 0)  # next update() of each plugin
     awake = True
     pomodoro = False      # the Arduino runs it: only a slow needle
-    hot_cpu = hot_ram = False  # past HOT
-    stale_cpu = False  # the next scan's CPU figures can't be trusted
-    fresh_cpu = False  # top_cpu is from a scan with real CPU figures
-    top_cpu = top_ram = ("", 0)  # if it starts with the screen asleep
-    net = Network()
     # Lines other than readings, sent one per reading: the Arduino's serial buffer
     # holds 64 bytes and it stops reading for ~10 ms while it redraws the LCD
     queue = deque()
     sent_rows = [None, None]  # LCD rows as last queued
+    glyphs = lcd.Glyphs()
     rx = b""
+
+    def resume(now):
+        # After a pause (screen asleep, Pomodoro) the plugins' figures would span it
+        for p in PLUGINS:
+            p.resume()
+            due[p] = now
 
     s = None
     try:
@@ -447,8 +257,7 @@ def main():
                     s = connect(port)
                     rx = b""
                     queue.clear()
-                    restarted = True
-                    pomodoro = False  # connect() read the READY: a reset ends it
+                    restarted = True  # connect() read the READY
 
                 lines, rx = read_lines(s, rx)
                 for line in lines:
@@ -457,96 +266,72 @@ def main():
                         print("The Arduino restarted.")
                         queue.clear()
                         restarted = True
-                        pomodoro = False
                     elif line == b"CLICK" and awake:
-                        mode = MODES[(MODES.index(mode) + 1) % len(MODES)]
+                        mode = names[(names.index(mode) + 1) % len(names)]
                         notice_until = now + NOTICE
                         next_text = now  # the new text at once
                         if args.verbose:
-                            print(f"Needle: {NAMES[mode]}")
+                            print(f"Needle: {mode}")
                     elif line in (b"POMODORO ON", b"POMODORO OFF"):
                         print(line.decode().capitalize())
                         pomodoro = line == b"POMODORO ON"
                         if not pomodoro:
-                            # Back at once. The LCD still has the text from before,
-                            # and app and network figures would span the Pomodoro
+                            # Back at once: the LCD still has the text from before
                             sent_rows = [None, None]
-                            next_scan = next_text = now
-                            stale_cpu = True
-                            net.last = None
+                            next_text = now
+                            resume(now)
                     elif line == b"TEST":
                         print("Test")
                 if restarted:
+                    if pomodoro:  # a reset ends it, as POMODORO OFF would
+                        pomodoro = False
+                        resume(now)
                     queue.extend(setup_lines(awake))
                     sent_rows = [None, None]
-                    next_check = next_scan = next_text = 0
+                    glyphs.reset()  # the LCD lost them
+                    next_check = next_text = 0
                     next_clock = now + CLOCK_INTERVAL
 
-                cpu = cpu * (1 - ALPHA) + psutil.cpu_percent() * ALPHA
-                ram = psutil.virtual_memory().percent
-
-                was_high, was_cpu_hot = hot_cpu or hot_ram, hot_cpu
-                hot_cpu, hot_ram = hot("C", cpu, hot_cpu), hot("R", ram, hot_ram)
-                high = hot_cpu or hot_ram
-                if high and not was_high:
-                    next_scan = now  # the last scan is from before the rise
-                # A process's first scan reads 0% CPU: whatever started the rise may
-                # be new, and only shows on the scan after
-                if hot_cpu and not was_cpu_hot:
-                    stale_cpu = True
-
-                woke = False
                 if now >= next_check:
                     if display_on() != awake:
-                        awake = woke = not awake
+                        awake = not awake
                         print("Screen on." if awake else "Screen asleep: parking.")
                         queue.append(f"B{BRIGHTNESS}\n" if awake else "B0\nP\n")
-                        if not awake:
-                            net.last = None  # the next reading would span the sleep
+                        if awake:
+                            resume(now)
                     elif not awake:
                         queue.append("B0\n")  # still asleep: the Arduino forgets B0 after 15 s
-                    if awake:
-                        net.find_interface()  # Wi-Fi and cable may swap
                     next_check = now + CHECK_INTERVAL
                 if now >= next_clock:
                     queue.append(clock_line())
                     next_clock = now + CLOCK_INTERVAL
 
-                # Faster while high, so the app keeps up. Just after waking, each
-                # app's CPU spans the sleep. With stale CPU figures, keep the last
-                # app on row 0 and none on row 1 (uptime and network) until the
-                # next scan, 1 s later
-                stale_cpu |= woke
-                if awake and not pomodoro and (woke or now >= next_scan):
-                    app_cpu, top_ram = top_apps()
-                    if not stale_cpu:
-                        top_cpu = app_cpu
-                    fresh_cpu = not stale_cpu
-                    if args.verbose:
-                        print(f"Top CPU {top_cpu[0]} {top_cpu[1]:.0f}%  "
-                              f"Top RAM {top_ram[0]} {top_ram[1]:.0f}%")
-                    next_scan = now + (HOT_APPS_INTERVAL if stale_cpu or high else APPS_INTERVAL)
-                    stale_cpu = False
+                ctx = Context(now, mode, args.verbose)
+                if awake and not pomodoro:
+                    for p in PLUGINS:
+                        if now >= due[p]:
+                            p.update(ctx)
+                            due[p] = now + p.interval
 
                 if awake:
-                    value = cpu if mode == "C" else ram
-                    s.write(f"N{value:.1f}\n".encode())
+                    s.write(f"N{needles[mode]():.1f}\n".encode())
                     if args.verbose:
-                        print(f"CPU {cpu:5.1f}%  RAM {ram:5.1f}%")
-                    if not pomodoro and now >= next_net:
-                        net.read()
-                        next_net = now + NET_INTERVAL
+                        print("  ".join(f"{name} {value():5.1f}%" for name, value in needles.items()))
                     if not pomodoro and now >= next_text:
-                        rows = list(lcd_rows(mode, cpu, ram, top_cpu, top_ram, net,
-                                             hot_cpu and fresh_cpu, hot_ram))
+                        rows = lcd_rows(PLUGINS, ctx)
                         if now < notice_until:
-                            rows[0] = f"Needle: {NAMES[mode]}"
-                        for row, text in enumerate(rows):
-                            if text != sent_rows[row]:
-                                # A row still queued is out of date: replace it
-                                sent_rows[row] = text
-                                queue = deque(l for l in queue if not l.startswith(f"T{row}"))
-                                queue.append(text_line(row, text))
+                            rows[0] = f"Needle: {mode}"
+                        if rows != sent_rows:
+                            # The custom characters first, in slots not on the LCD now
+                            # if it can: a slot rewritten changes on the LCD at once
+                            loads, lcd_text = glyphs.place(rows, sent_rows)
+                            queue.extend(loads)
+                            for row, text in enumerate(rows):
+                                if text != sent_rows[row]:
+                                    # A row still queued is out of date: replace it
+                                    sent_rows[row] = text
+                                    queue = deque(l for l in queue if not l.startswith(f"T{row}"))
+                                    queue.append(text_line(row, lcd_text[row]))
                         next_text = now + TEXT_INTERVAL
                 if queue:
                     s.write(queue.popleft().encode())

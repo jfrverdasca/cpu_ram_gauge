@@ -92,21 +92,23 @@ RAM usage, driven by an Arduino over serial.
   "automotive" T5 LEDs: many are for 12 V.
 - **Pomodoro** (implemented 2026-10-13; button and piezo still to be wired
   and tested): on the Arduino, so it works without the PC. Entered and left
-  with a 1 s press on the main button. A second, dedicated button (D11)
-  only starts/pauses the time, or starts the next phase. Work and breaks
+  with a 1 s press on the main button; inside it a click starts/pauses the
+  time, or starts the next phase. Until 2026-10-14 that was a second,
+  dedicated button (D11): one button is enough, since clicks had no other use
+  in the Pomodoro. Work and breaks
   both run the needle 100%→0% as the time runs out (it was: break rising
   back to 100%); alert via a **passive piezo** (D13).
   - Entering starts the first focus at once.
   - At the end of a phase the piezo beeps 3 times and the next phase waits
-    for the Pomodoro button (the needle stays at 0%). Long break after every
+    for a click (the needle stays at 0%). Long break after every
     `cycles` focus sessions.
   - Durations (focus, break, long break, cycles before the long one) and the
     piezo's tone and volume are set at the top of `gauge.py` and saved on
     the Arduino (EEPROM), so it works without the PC. Defaults 25/5/15 min,
     long break every 4, 2000 Hz, volume 50.
-  - Clicks on the main button are ignored while in Pomodoro; only the 1 s
-    press (exit) and the 3 s press (lamp test, which then goes back to the
-    Pomodoro) work. The script's needle and text are ignored meanwhile.
+  - Clicks don't reach the script while in Pomodoro (they start/pause it);
+    the 1 s press exits, the 3 s press runs the lamp test, which then goes
+    back to the Pomodoro. The script's needle and text are ignored meanwhile.
   - The LCD stays lit (the script's brightness, full without the script or
     with the computer asleep).
   - The needle position goes to the clock module as in clock mode; without
@@ -138,16 +140,16 @@ RAM usage, driven by an Arduino over serial.
     the data timeout (clock or park, LCD off), clock and date, Pomodoro,
     lamp test.
   - **Script:** what the needle shows, both LCD rows, glyphs, brightness,
-    the modes (`MODES`, in click order) and what clicks mean. The
-    `Needle: ...` notice moved to the script. Everything safe to change is
-    at the top of `gauge.py`.
+    the needles (the plugins', in click order; see Plugins) and what clicks
+    mean. The `Needle: ...` notice moved to the script. Everything safe to
+    change is at the top of `gauge.py`.
   - **Main button**, classified by the Arduino on release, never on reaching
     a threshold (holding to 3 s must not trigger the 1 s action on the way).
     While held, the LCD shows what releasing will do:
 
     | Held | LCD while held | On release |
     |---|---|---|
-    | < 1 s | — | `CLICK` to the script; with the LCD off, wakes it for 10 s instead |
+    | < 1 s | — | `CLICK` to the script; with the LCD off, wakes it for 10 s instead; in the Pomodoro, start/pause or the next phase |
     | 1–3 s | `Start pomodoro` / `Exit pomodoro` | enter/leave Pomodoro (Arduino) |
     | ≥ 3 s | `Test` | lamp test (Arduino) |
     | at power-up | — | forced homing; that release is ignored |
@@ -169,11 +171,12 @@ RAM usage, driven by an Arduino over serial.
     connecting (up to 10 s, homing included) and exits on a mismatch (also
     an old firmware's bare `READY`), as firmware and script no longer work
     without each other. Without any `READY` it warns and carries on.
-  - **Sent only when needed:** glyphs, Pomodoro and piezo settings,
-    brightness and time on connecting and on every `READY` (the Arduino
-    restarted, which before went unnoticed and needed resending every 5 s);
-    brightness also when the computer's screen sleeps or wakes, the time
-    hourly, the LCD rows when they change.
+  - **Sent only when needed:** Pomodoro and piezo settings, brightness and
+    time on connecting and on every `READY` (the Arduino restarted, which
+    before went unnoticed and needed resending every 5 s); brightness also
+    when the computer's screen sleeps or wakes, the time hourly, the LCD rows
+    when they change, glyphs when a row needs one that isn't loaded
+    (2026-10-14; before, all of them on connecting).
   - **No thread:** `gauge.py` reads the port on every 50 ms reading, without
     waiting, so a click is answered within ~50 ms.
   - **During the Pomodoro `gauge.py` almost rests** (2026-10-13): from
@@ -290,6 +293,8 @@ RAM usage, driven by an Arduino over serial.
 - `firmware/gauge/`: final sketch.
 - `pc/gauge.py`: PC script (`pip install -r pc/requirements.txt`).
   Runs on macOS and Linux; also starts on Windows (without screen detection).
+  `pc/plugins/`: what it shows (see Plugins); `pc/lcd.py`: LCD helpers they
+  share (scrolling, accents, glyphs).
 - `tests/run.sh` (2026-10-13): `tests/test_gauge.py` runs `gauge.py` against a
   fake serial port (unittest); `tests/firmware/test_firmware.cpp` runs
   `gauge.ino` on the computer, with `tests/firmware/mock/` standing in for the
@@ -343,8 +348,8 @@ loses its glyphs. Until 2026-10-13 `G`, `B` and the text were resent every few
 seconds for that; now `gauge.py` reads every line and resends them on `READY`.
 
 ### Behaviour
-- **LCD text composed in `gauge.py`** (`lcd_rows()`, `GLYPHS`,
-  `BRIGHTNESS`): to change what is shown, only the Python needs touching.
+- **LCD text composed in `gauge.py`** by the plugins (`pc/plugins/`): to
+  change what is shown, only the Python needs touching.
   Today: row 1 with the icon of the other metric (chip / RAM stick; or a
   fixed letter C/R), the % and the top app (`▣ 5% Code`); row 2 with a power
   icon and the uptime as `HH:MMh` or, from 24 h on, `DD:HHd` (fixed width),
@@ -371,7 +376,8 @@ seconds for that; now `gauge.py` reads every line and resends them on `READY`.
   earlier measurement). Per second: top apps ~2.8 ms, CPU + RAM readings
   ~0.13 ms, network ~0.07 ms, interface check ~0.04 ms, LCD text ~0.02 ms;
   the rest is waking up 20×/s and the serial writes. Moving RAM to its own interval
-  isn't worth it: on macOS it comes from the same call as CPU.
+  isn't worth it: on macOS it comes from the same call as CPU. After the
+  plugins (2026-10-14, 20 s, email off): ~1.0%, the same.
 - **Network:** counts only the interface that internet traffic goes through,
   chosen by route (a UDP `connect` to `1.1.1.1` sends nothing) and not by
   name, which changes from OS to OS (the Mac has 18 interfaces: `lo0`,
@@ -393,6 +399,51 @@ seconds for that; now `gauge.py` reads every line and resends them on `READY`.
   the LCD text and lighting turn off.
 - **The LCD is only written while the needle is still:** writing blocks for
   a few ms and could make the motor lose steps mid-move.
+
+### Plugins (2026-10-14)
+`main()` used to hold CPU, RAM, apps, network and their state together; each
+new feature added more. Now what the needle and the LCD show comes from
+plugins, and `gauge.py` keeps the serial port, the loop, screen sleep, the
+Pomodoro, clicks, the `Needle: ...` notice and putting the rows together.
+- **One list, `PLUGINS`**, at the top of `gauge.py`. Its order is both the
+  needles' click order and the LCD priority: each row shows the first plugin
+  with something for it (`None` leaves it to the next). Considered a second
+  list for the needles; one is simpler, and the two orders rarely clash
+  (email has no needle, CPU and RAM come from one plugin).
+- **Interface** (`pc/plugins/__init__.py`, all optional): `needles` (name →
+  %), `update()` every `interval` s, `rows()` every 0.25 s, `start()`,
+  `resume()` after a pause. No plugin runs while the screen sleeps or in
+  the Pomodoro, so they cost nothing then; `resume()` lets them drop figures
+  that would span the pause. A plugin hidden by the ones before it isn't
+  asked for its rows, so what it would show waits.
+- **Plugins:** `system` (CPU and RAM needles, the other metric and top app
+  on row 0, the hot app on row 1; moved unchanged), `status` (uptime and
+  network on row 1), `email`.
+- **Glyphs on demand** (`lcd.Glyphs`): plugins register any number of 5×8
+  characters (`lcd.glyph()` gives a private-use Unicode character to put in
+  text); the script loads into the LCD's 8 slots only those the rows use,
+  just before the rows, keeping loaded ones where they are. A new one takes
+  an empty slot, else one no row needs, preferably not on the LCD: a slot
+  rewritten changes on the LCD at once. Limit: 8 different ones on screen.
+  The slots (CGRAM) are RAM in the LCD's controller: no wear from rewriting,
+  but lost on a reset (resent after `READY`).
+- **Accents:** `lcd.ascii()` drops them (João → Joao); the LCD's ROM has
+  none of the Portuguese ones.
+- **Email** (`plugins/email.py`): IMAP every 60 s in a thread (the loop never
+  waits), mailbox opened read-only and headers fetched with `BODY.PEEK`, so
+  nothing is marked read. The first poll only notes the last UID (no flood of
+  old unread mail); a poll with nothing new and nothing waiting is just a
+  `STATUS`. Each new unread message shows until its longest row has scrolled
+  through once (at least 5 s), one at a time; one read elsewhere meanwhile is
+  dropped. Mail that comes during the Pomodoro or sleep shows afterwards: the
+  3 newest one by one, then `+N emails` for 5 s. Layout by templates
+  (`{icon}`, `{sender}`, `{address}`, `{subject}`), e.g. sender on row 0 and
+  subject on row 1, or `sender - subject` on row 1 only; what comes before
+  the first field other than `{icon}` stays still. The account goes in
+  `.env` (out of git; `.env.example` lists the names), read by `load_env()`
+  in `gauge.py` without python-dotenv; real environment variables win. The
+  macOS Keychain was considered: `.env` is simpler and works everywhere,
+  at the cost of the (app) password in plain text on disk.
 
 ### EEPROM
 - One 4-byte record at address 0: position (2), phase (1), `MAGIC` (1,
@@ -421,12 +472,12 @@ unchanged.
 |---|---|
 | D2, D3 | motor, coil A (via driver) |
 | D8, D9 | motor, coil B (via driver) |
-| D4 | CPU/RAM button, to ground |
+| D4 | the button (needle, Pomodoro, lamp test), to ground |
 | D5, D6 | warning lights (PWM, LED + 330 Ω straight to the pin) |
 | D7, D12 | LCD RS, E |
 | A0–A3 | LCD D4–D7 |
 | D10 | lighting: LCD + needle + scale (PWM, via transistor) |
-| D11 | Pomodoro button, to ground (in the firmware; not wired yet) |
+| D11 | free (was the Pomodoro button until 2026-10-14) |
 | D13 | passive piezo, driven from Timer2 (in the firmware; not wired yet) |
 | A4, A5 | RTC clock (DS3231), I2C SDA/SCL |
 | A6, A7 | free (analog input only) |
@@ -552,7 +603,7 @@ Status: **have**, **buy**, **salvaged** (from old speedometers), **later**.
 | Mini-USB cable | 1 | have? | most Nano V3 clones are Mini-USB |
 | **TB6612FNG** module | 1 | buy | motor driver; PWMA, PWMB and STBY to 5V |
 | 16×2 LCD JHD162A | 1 | have | backlight resistor on board |
-| Push button (CPU/RAM, self-test, forced homing) | 1 | have | panel mount for the final version |
+| Push button (needle, Pomodoro, self-test, forced homing) | 1 | have | panel mount for the final version |
 | **10 kΩ multi-turn trimpot** (3296W) | 1 | buy | LCD contrast; the 7 kΩ from the breadboard also works |
 
 **Lighting**
@@ -600,7 +651,6 @@ LEDs, multimeter, flux, desoldering braid.
 | Old LCD screen (laptop/monitor) | 1 | salvage light guide, diffuser, reflector and LEDs; alternative to the strip |
 | Passive piezo | 1 | Pomodoro |
 | RTC module with backup battery | 1 | clock with no data (have; confirm model) |
-| Push button | 1 | Pomodoro |
 | Transparency film for the printer | 1–2 sheets | backlit dial |
 | Breadboard and jumper wires | — | testing the lighting, if not at hand |
 
