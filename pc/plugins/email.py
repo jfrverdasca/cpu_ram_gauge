@@ -30,6 +30,8 @@ ENVELOPE_ICON = lcd.glyph([
     "....."])
 
 Message = namedtuple("Message", "uid sender address subject")
+# On the LCD: a Message, or the summary's count
+Showing = namedtuple("Showing", "item rows fixed since until")
 
 
 def fixed_length(template, icon):
@@ -58,14 +60,19 @@ def fetch(host, user, password, folder, last, validity, first, newest):
     (last, validity, UIDs from first on still unread or None when it didn't look, the
     newest new unread messages, up to newest of them, how many new unread ones were
     left out)."""
+    # Quoted: imaplib sends it as is, and a name with spaces ("[Gmail]/All Mail") fails
+    folder = '"' + folder.replace("\\", "\\\\").replace('"', '\\"') + '"'
     with imaplib.IMAP4_SSL(host, timeout=30) as imap:
         imap.login(user, password)
-        _, data = imap.status(folder, "(UIDNEXT UIDVALIDITY)")
+        ok, data = imap.status(folder, "(UIDNEXT UIDVALIDITY)")
+        if ok != "OK":  # e.g. no such folder: the server's words
+            raise imaplib.IMAP4.error(f"{folder}: {data[0].decode(errors='replace')}")
         status = dict(re.findall(rb"(UIDNEXT|UIDVALIDITY) (\d+)", data[0]))
         top, now_validity = int(status[b"UIDNEXT"]) - 1, int(status[b"UIDVALIDITY"])
-        # First poll, or the server renumbered the mailbox: only remember where it is
+        # First poll, or the server renumbered the mailbox: only remember where it is.
+        # After a renumbering, the UIDs waiting to be shown mean nothing: none unread
         if last is None or now_validity != validity:
-            return top, now_validity, None, [], 0
+            return top, now_validity, None if last is None else set(), [], 0
         if top <= last and first > top:
             return last, validity, None, [], 0  # nothing new, nothing waiting
         imap.select(folder, readonly=True)
@@ -74,8 +81,9 @@ def fetch(host, user, password, folder, last, validity, first, newest):
         unread = {int(u) for u in data[0].split() if int(u) >= first or int(u) > last}
         new = sorted(u for u in unread if u > last)
         messages = []
-        if new[-newest:]:
-            _, data = imap.uid("FETCH", ",".join(map(str, new[-newest:])),
+        wanted = new[-newest:] if newest > 0 else []  # new[-0:] would be all of them
+        if wanted:
+            _, data = imap.uid("FETCH", ",".join(map(str, wanted)),
                                "(UID BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)])")
             for i, part in enumerate(data):
                 if isinstance(part, tuple):
@@ -85,7 +93,7 @@ def fetch(host, user, password, folder, last, validity, first, newest):
                     if uid:  # without it, skipped: last still moves on, from STATUS
                         messages.append(parse_headers(int(uid.group(1)), part[1]))
         return (max([top, last] + new), validity, unread, sorted(messages),
-                max(0, len(new) - newest))
+                len(new) - len(wanted))
 
 
 class Email(Plugin):
@@ -109,7 +117,7 @@ class Email(Plugin):
         self.last = self.validity = None
         self.queue = deque()  # Messages to show, oldest first
         self.extra = 0        # new ones left out, for the summary
-        self.showing = None   # (Message or the summary's count, rows, fixed, since, until)
+        self.showing = None   # a Showing
         self.thread = self.result = self.error = None
 
     def start(self):
@@ -139,7 +147,11 @@ class Email(Plugin):
             self.result = e
 
     def collect(self):
-        """Takes in the last poll's result, if one came."""
+        """Takes in the last poll's result, once its thread has ended: before that,
+        the thread could write it between the two halves of the swap below, and it
+        would be lost."""
+        if not self.thread or self.thread.is_alive():
+            return
         result, self.result = self.result, None
         if result is None:
             return
@@ -164,7 +176,7 @@ class Email(Plugin):
     def resume(self):
         # The Pomodoro or the sleep cut it short: shown again from the start
         if self.showing:
-            item = self.showing[0]
+            item = self.showing.item
             if isinstance(item, Message):
                 self.queue.appendleft(item)
             else:
@@ -173,7 +185,7 @@ class Email(Plugin):
 
     def rows(self, ctx):
         self.collect()
-        if self.showing and ctx.now >= self.showing[4]:
+        if self.showing and ctx.now >= self.showing.until:
             self.showing = None
         if not self.showing:
             if self.queue:
@@ -183,16 +195,16 @@ class Email(Plugin):
                 fixed = [t and fixed_length(t, self.icon) for t in self.templates]
                 seconds = max([self.min_seconds] + [lcd.scroll_time(r[f:], lcd.WIDTH - f)
                                                     for r, f in zip(rows, fixed) if r])
-                self.showing = (m, rows, fixed, ctx.now, ctx.now + seconds)
+                self.showing = Showing(m, rows, fixed, ctx.now, ctx.now + seconds)
             elif self.extra:
                 # The summary on the first row the layout uses
                 text = self.summary.format(icon=self.icon, count=self.extra)
                 rows = [None, None]
                 rows[0 if self.templates[0] else 1] = text
-                self.showing = (self.extra, rows, [lcd.WIDTH] * 2, ctx.now,
-                                ctx.now + self.summary_seconds)
+                self.showing = Showing(self.extra, rows, [lcd.WIDTH] * 2, ctx.now,
+                                       ctx.now + self.summary_seconds)
                 self.extra = 0
             else:
                 return None, None
-        _, rows, fixed, since, _ = self.showing
-        return tuple(r and lcd.fit(r, f, since) for r, f in zip(rows, fixed))
+        s = self.showing
+        return tuple(r and lcd.fit(r, f, s.since) for r, f in zip(s.rows, s.fixed))

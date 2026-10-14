@@ -139,7 +139,9 @@ def clock_line():
 
 
 def text_line(row, text):
-    return f"T{row}{text[:lcd.WIDTH]}\n"
+    # Plugins drop accents before fitting (lcd.ascii()); anything else that isn't
+    # ASCII by now, one "?" each, so the row keeps its length
+    return f"T{row}{text[:lcd.WIDTH].encode('ascii', 'replace').decode()}\n"
 
 
 def setup_lines(awake):
@@ -196,13 +198,14 @@ def load_env(path=ENV_FILE):
 
 def lcd_rows(plugins, ctx):
     """Each row from the first plugin with something for it; empty if none. Plugins
-    after both rows are taken aren't asked, so what they'd show waits."""
+    after both rows are taken aren't asked, so what they'd show waits. Already in
+    lcd.ascii(): converting after fitting would change the length ("™" -> "TM")."""
     rows = [None, None]
     for p in plugins:
         rows = [mine if row is None else row for row, mine in zip(rows, p.rows(ctx))]
         if None not in rows:
             break
-    return [lcd.ascii(row or "") for row in rows]
+    return [row or "" for row in rows]
 
 
 def main():

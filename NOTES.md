@@ -428,7 +428,9 @@ Pomodoro, clicks, the `Needle: ...` notice and putting the rows together.
   The slots (CGRAM) are RAM in the LCD's controller: no wear from rewriting,
   but lost on a reset (resent after `READY`).
 - **Accents:** `lcd.ascii()` drops them (João → Joao); the LCD's ROM has
-  none of the Portuguese ones.
+  none of the Portuguese ones. Plugins call it before fitting a row: after,
+  the length would change ("™" → "TM"). Whatever else isn't ASCII reaches
+  the LCD as one `?` each (`text_line()`).
 - **Email** (`plugins/email.py`): IMAP every 60 s in a thread (the loop never
   waits), mailbox opened read-only and headers fetched with `BODY.PEEK`, so
   nothing is marked read. The first poll only notes the last UID (no flood of

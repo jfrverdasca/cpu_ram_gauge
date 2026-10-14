@@ -173,6 +173,11 @@ class Rows(unittest.TestCase):
         self.assertEqual(last.asked, 0)  # both rows taken: not asked
         self.assertEqual(gauge.lcd_rows([top], None), ["", "mail"])
 
+    def test_rows_stay_as_plugins_fit_them(self):
+        # Converting after fitting would make "TM" of it and push the row past 16
+        self.assertEqual(gauge.lcd_rows([self.Fixed(("a\u2122", None))], None), ["a\u2122", ""])
+        self.assertEqual(gauge.text_line(0, "Needle: N\u00ba \u2122"), "T0Needle: N? ?\n")
+
     def test_lcd_text_has_no_accents(self):
         self.assertEqual(lcd.ascii("João Ação ✓"), "Joao Acao ?")
         icon = system.CPU_ICON
@@ -230,6 +235,8 @@ class FakeIMAP:
         self.mail = mail
         self.searches = 0
         self.uids = True  # FETCH answers say which UID
+        self.validity = 7
+        self.folders = []  # as sent
 
     def __call__(self, host, timeout=None):
         return self
@@ -245,7 +252,11 @@ class FakeIMAP:
             raise email_plugin.imaplib.IMAP4.error("AUTHENTICATIONFAILED")
 
     def status(self, folder, items):
-        return "OK", [f"INBOX (UIDNEXT {max(self.mail, default=0) + 1} UIDVALIDITY 7)".encode()]
+        self.folders.append(folder)
+        if folder not in ('"INBOX"', '"[Gmail]/All Mail"'):
+            return "NO", [b"[NONEXISTENT] Unknown Mailbox"]
+        return "OK", [f"{folder} (UIDNEXT {max(self.mail, default=0) + 1} "
+                      f"UIDVALIDITY {self.validity})".encode()]
 
     def select(self, folder, readonly=False):
         assert readonly  # never marks anything read
@@ -386,6 +397,42 @@ class EmailPlugin(unittest.TestCase):
         self.assertEqual(self.rows(p), (None, None))
         self.assertIsNone(p.error)
         self.assertEqual(p.last, 2)  # moves on anyway
+
+    def test_a_running_poll_is_left_alone(self):
+        p = self.plugin()
+        p.thread = mock.Mock(is_alive=lambda: True)
+        p.result = (5, 7, None, [], 0)  # may be half written: not taken yet
+        p.collect()
+        self.assertEqual((p.last, p.result), (1, (5, 7, None, [], 0)))
+
+    def test_max_shown_0_shows_only_the_summary(self):
+        p = self.plugin(max_shown=0)
+        for u in range(2, 6):
+            self.mail[u] = [f"S{u} <s@x.pt>", f"Mail {u}", False]
+        self.poll(p)
+        self.assertEqual(self.rows(p), (f"{email_plugin.ENVELOPE_ICON} +4 emails", None))
+        self.assertEqual(self.rows(p, after=5.1), (None, None))
+
+    def test_a_renumbered_mailbox_drops_the_queue(self):
+        p = self.plugin()
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
+        self.poll(p)
+        self.assertEqual(self.rows(p)[1], "One")  # Two waits
+        self.mail[4] = ["C <c@x.pt>", "Three", False]
+        self.imap.validity = 8
+        self.poll(p)
+        self.assertEqual(self.rows(p, after=5.1), (None, None))  # Two's UID means nothing now
+        self.assertEqual(p.last, 4)  # from here on
+
+    def test_folder_is_quoted_and_a_missing_one_says_so(self):
+        p = self.plugin(folder="[Gmail]/All Mail")
+        self.assertEqual(self.imap.folders[-1], '"[Gmail]/All Mail"')
+        p = email_plugin.Email(folder="Nope")
+        with redirect_stdout(io.StringIO()) as out:
+            p.start()
+            self.poll(p)
+            self.rows(p)
+        self.assertIn('"Nope": [NONEXISTENT] Unknown Mailbox', out.getvalue())
 
     def test_off_without_an_account(self):
         del email_plugin.os.environ["EMAIL_PASSWORD"]
