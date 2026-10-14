@@ -238,7 +238,7 @@ RAM usage, driven by an Arduino over serial.
   (127) has the needle pointing straight up and 100% mirrors 0% on the other
   side. Measured with `step_counter`: `h`, `+12`, `z`, then `+115` to
   vertical and `+115` to 100%; the scale spans 230 half-steps from
-  `POS_MIN`. Redo it if `HOME_PHASE` changes (to-do 13).
+  `POS_MIN`. Redo it if `HOME_PHASE` changes.
 
 ## Bench results (2026-10-02, direct drive D2/D3/D8/D9, sequence s0)
 - The motor responds to SwitecX25's X25 sequence (6 states).
@@ -280,7 +280,7 @@ RAM usage, driven by an Arduino over serial.
   exact. The wait doesn't block (serial and LCD keep running) and costs
   nothing after a longer pause. Then 3 heavy Spotlight searches (needle near 100%):
   back at zero every time. That other motor is the one mounted now: its
-  `HOME_PHASE` is still the old motor's (to-do 13).
+  `HOME_PHASE` is the old motor's, kept (to-do 13).
 - **`HOME_PHASE = 6`** (2026-10-03, direct drive, 3 identical measurements;
   `MAGIC` changed to `0xA9`). With this, homing always ends in the same
   place, even after pulling the plug.
@@ -640,9 +640,13 @@ LEDs, multimeter, flux, desoldering braid.
     sessions under load and see where it parks. If it drops from session to
     session, it loses steps going up: go up slower (`MIN_UP_US`) or
     TB6612FNG.
-13. Recalibrate `HOME_PHASE` for the motor mounted on 2026-10-09 (same
-    model, swapped for the bench tests), with the procedure in 6. Until then
-    a homing can end up to 4 half-steps above the stop.
+13. ✅ `HOME_PHASE` for the motor mounted on 2026-10-09 (2026-10-14): kept
+    at 6, the old motor's. With another motor a homing can end up to 4
+    half-steps above the stop, but always in the same place, and the scale
+    (`POS_MIN`, `POS_MAX`) was measured after a homing on this motor, so it
+    already includes that offset. Checked: several forced homings, same zero
+    every time. Recalibrate (procedure in 6), then `POS_MAX`, only if the
+    motor or its wiring changes.
 14. **Keep the Pomodoro across a reset** (noted 2026-10-13, not done).
     Opening the serial port resets the Arduino (DTR), so starting
     `gauge.py` (or its reconnecting after a port error) loses a Pomodoro
