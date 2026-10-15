@@ -90,9 +90,15 @@ def top_apps():
             (top_ram, ram.get(top_ram, 0) / _ram_total * 100))
 
 
+def size(n):
+    """Bytes as the LCD shows them: "850M", "2.6G" (bytes, as the network rate)."""
+    mb = round(n / 2**20)
+    return f"{mb}M" if mb < 1000 else f"{n / 2**30:.1f}G"  # never "1000M"
+
+
 def metric_row(icon, value, app):
     # "C 5% Code", "C 72% Code": low values leave more room for the name
-    row = f"{icon} {value:.0f}% "
+    row = f"{icon} {value} "
     # Accents off before fitting: a decomposed "é" (NFD, common in macOS paths) is
     # two characters until then, "™" one that becomes "TM"
     return lcd.fit(row + lcd.ascii(app), len(row))
@@ -174,8 +180,10 @@ class System(Plugin):
         top_ram = self.top_ram[0], min(self.top_ram[1], self.ram)
         if ctx.needle == "CPU":
             app = self.hot_cpu and self.fresh_cpu and top_cpu[0]
-            return (metric_row(self.ram_icon, self.ram, top_ram[0]),
-                    metric_row(self.app_icon, top_cpu[1], top_cpu[0]) if app else None)
+            return (metric_row(self.ram_icon, f"{self.ram:.0f}%", top_ram[0]),
+                    metric_row(self.app_icon, f"{top_cpu[1]:.0f}%", top_cpu[0]) if app else None)
         app = ctx.needle == "RAM" and self.hot_ram and top_ram[0]
-        return (metric_row(self.cpu_icon, self.cpu, top_cpu[0]),
-                metric_row(self.app_icon, top_ram[1], top_ram[0]) if app else None)
+        # The app's RAM in bytes, as Activity Monitor gives it, not its share
+        return (metric_row(self.cpu_icon, f"{self.cpu:.0f}%", top_cpu[0]),
+                metric_row(self.app_icon, size(top_ram[1] / 100 * _ram_total), top_ram[0])
+                if app else None)
