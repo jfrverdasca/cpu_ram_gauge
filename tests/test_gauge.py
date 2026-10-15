@@ -486,6 +486,17 @@ class EmailPlugin(unittest.TestCase):
             self.rows(p)
         self.assertIn('"Nope": [NONEXISTENT] Unknown Mailbox', out.getvalue())
 
+    def test_notifies_while_a_message_shows(self):
+        p = self.plugin()
+        ctx = Context(self.now, "CPU", False)
+        self.assertFalse(p.notifying(ctx))
+        self.mail[2] = ["A <a@x.pt>", "One", False]
+        self.poll(p)
+        self.rows(p)
+        self.assertTrue(p.notifying(ctx))
+        self.rows(p, after=5.1)
+        self.assertFalse(p.notifying(ctx))
+
     def test_off_without_an_account(self):
         del email_plugin.os.environ["EMAIL_PASSWORD"]
         p = email_plugin.Email()
@@ -581,6 +592,30 @@ class Main(unittest.TestCase):
         self.assertIn("T0", [line[:2] for line in after])  # rows resent at once
         self.assertIn("T1", [line[:2] for line in after])
         self.assertTrue([t for t in scans if t > 3.0])
+
+    def test_full_light_while_a_plugin_notifies(self):
+        port = FakeSerial(duration=1.4)
+
+        class Alert(Plugin):  # a notification from 0.4 s to 0.9 s
+            def notifying(self, ctx):
+                return 0.4 <= port.elapsed() < 0.9
+
+        run_main(port, plugins=[Alert(), system.System(), status.Status()])
+        light = [line for line in port.lines() if line.startswith("B")]
+        self.assertEqual(light, [f"B{gauge.BRIGHTNESS}", "B255", f"B{gauge.BRIGHTNESS}"])  # once each
+        self.assertIn("B255", port.lines(0.4, 0.7))
+
+    def test_no_full_light_in_the_pomodoro(self):
+        port = FakeSerial(events=[(0.6, b"POMODORO ON\n")], duration=1.5)
+
+        class Alert(Plugin):
+            def notifying(self, ctx):
+                return True
+
+        run_main(port, plugins=[Alert(), system.System(), status.Status()])
+        self.assertIn("B255", port.lines(0, 0.6))
+        self.assertEqual([line for line in port.lines(0.6) if line.startswith("B")],
+                         [f"B{gauge.BRIGHTNESS}"])
 
     def test_reconnecting_ends_the_pomodoro(self):
         # The Arduino restarts when the port opens again, which ends its Pomodoro

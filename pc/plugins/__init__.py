@@ -38,3 +38,8 @@ class Plugin:
         """(row 0, row 1) of LCD text, None for a row it has nothing for. Every 0.25 s
         while update() runs."""
         return None, None
+
+    def notifying(self, ctx):
+        """Whether what it shows now is a notification (new email): the LCD's light
+        goes to full meanwhile. Asked with rows(), every 0.25 s."""
+        return False

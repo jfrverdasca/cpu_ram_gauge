@@ -110,7 +110,8 @@ only the 3 newest show; the count includes the rest.
 next of their needles, in list order; each LCD row shows the first plugin in the
 list with something for it. A plugin is a class in `pc/plugins/` that overrides
 what it needs from `Plugin` (`pc/plugins/__init__.py`): `needles`, `update()` with
-its `interval`, `rows()`, `start()`, `resume()`. Plugins rest while the computer's
+its `interval`, `rows()`, `notifying()` (the LCD's light goes to full meanwhile, as
+for a new email), `start()`, `resume()`. Plugins rest while the computer's
 screen sleeps and during the Pomodoro. Custom characters come from `lcd.glyph()`:
 the script loads them into the LCD's 8 slots only while they're shown.
 

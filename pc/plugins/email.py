@@ -181,6 +181,9 @@ class Email(Plugin):
             self.queue.appendleft(self.showing.message)
         self.showing = None
 
+    def notifying(self, ctx):
+        return self.showing is not None
+
     def rows(self, ctx):
         self.collect()
         if self.showing and ctx.now >= self.showing.until:
