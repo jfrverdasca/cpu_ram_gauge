@@ -77,7 +77,6 @@ POMODORO_INTERVAL = 0.25
 READY_WAIT = 10       # the Arduino resets when the port opens and may home
 CHECK_INTERVAL = 5    # seconds between screen checks
 CLOCK_INTERVAL = 3600 # seconds between clock syncs
-TEXT_INTERVAL = 0.25  # seconds between LCD text updates
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"  # settings kept out of git
 
 # Arduino, Arduino.org, CH340, FTDI, CP210x
@@ -335,7 +334,7 @@ def main():
                                     sent_rows[row] = text
                                     queue = deque(l for l in queue if not l.startswith(f"T{row}"))
                                     queue.append(text_line(row, lcd_text[row]))
-                        next_text = now + TEXT_INTERVAL
+                        next_text = lcd.next_update(now)
                 if queue:
                     s.write(queue.popleft().encode())
                 time.sleep(POMODORO_INTERVAL if pomodoro else INTERVAL)

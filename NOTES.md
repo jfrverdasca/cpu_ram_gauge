@@ -359,6 +359,12 @@ seconds for that; now `gauge.py` reads every line and resends them on `READY`.
   Long app name: only the name slides (icon and % stay still), done in
   Python, one letter every 0.5 s and 2 s still at each end. The LCD's own
   scroll doesn't work: it shifts both rows together.
+  Even steps (2026-10-15): text updates were 0.25 s after the previous one,
+  0.26-0.28 s with the 50 ms loop, and drifted against the 0.5 s steps:
+  every ~4 s two letters moved 0.27 s apart. Updates now fall on multiples
+  of 0.25 s of the clock (`lcd.next_update()`) and `scroll()` counts whole
+  updates, `since` (an email's start) included, so a step is every second
+  update.
   `No data`, `Homing...`, the clock and the Pomodoro screens come from the
   Arduino; everything else from `gauge.py`.
 - **Top apps:** summed per app. On macOS a process counts towards the

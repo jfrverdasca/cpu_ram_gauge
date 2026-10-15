@@ -1,6 +1,7 @@
 """pc/gauge.py against a fake serial port. Run with tests/run.sh."""
 
 import io
+import random
 import sys
 import time
 import unittest
@@ -191,6 +192,28 @@ class Rows(unittest.TestCase):
         self.assertEqual(lcd.fit(text, 2, since=later), "> defghijklmnopq")
         self.assertEqual(lcd.scroll_time("a" * 20, 16), 2 * lcd.SCROLL_PAUSE + 4 * lcd.SCROLL_STEP)
         self.assertEqual(lcd.scroll_time("short"), 0)
+
+    def test_next_update_is_on_the_grid(self):
+        self.assertEqual(lcd.next_update(1.30), 1.5)
+        self.assertEqual(lcd.next_update(1.5), 1.75)
+
+    def test_scroll_steps_are_even(self):
+        # Updates as the loop runs them: up to 60 ms late in their slot
+        text = "".join(chr(65 + n % 26) for n in range(60))
+        jitter = random.Random(1)
+        now = since = 1000.13  # off the grid, as an email shown at ctx.now
+        shown, steps = None, []
+        while now < since + lcd.scroll_time(text) - 1:  # before it wraps to the start
+            with mock.patch.object(lcd.time, "monotonic", lambda: now):
+                row = lcd.scroll(text, since=since)
+            if row != shown and shown is not None:
+                steps.append(now)
+            shown = row
+            now = lcd.next_update(now) + jitter.uniform(0, 0.06)
+        gaps = [b - a for a, b in zip(steps, steps[1:])]
+        self.assertEqual(len(gaps), len(text) - lcd.WIDTH - 1)
+        for gap in gaps:
+            self.assertAlmostEqual(gap, lcd.SCROLL_STEP, delta=0.1)
 
 
 class Glyphs(unittest.TestCase):

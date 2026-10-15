@@ -5,6 +5,8 @@ import time
 import unicodedata
 
 WIDTH = 16
+TEXT_INTERVAL = 0.25  # seconds between LCD text updates
+# Both multiples of TEXT_INTERVAL: each step then comes after a whole number of updates
 SCROLL_STEP = 0.5     # seconds per character when a text doesn't fit (2 text updates)
 SCROLL_PAUSE = 2      # seconds still at each end
 
@@ -45,13 +47,24 @@ def scroll_time(text, width=WIDTH):
     return 2 * SCROLL_PAUSE + extra * SCROLL_STEP if extra > 0 else 0
 
 
+def next_update(now):
+    """When the next text update is due: on multiples of TEXT_INTERVAL, so updates
+    don't drift against scroll()'s steps (a loop that waits TEXT_INTERVAL from each
+    update runs a little slower, and every few seconds two steps came one update
+    apart)."""
+    return (now // TEXT_INTERVAL + 1) * TEXT_INTERVAL
+
+
 def scroll(text, width=WIDTH, since=0):
     """The part of text to show now: slides left when it doesn't fit, pausing at
-    each end. With since (time.monotonic()), it starts from the beginning then."""
+    each end. With since (time.monotonic()), it starts from the beginning then.
+    Counts whole text updates (next_update()), so a step comes every
+    SCROLL_STEP / TEXT_INTERVAL updates, however late in its slot each one runs."""
     extra = len(text) - width
     if extra <= 0:
         return text
-    t = (time.monotonic() - since) % scroll_time(text, width)
+    ticks = int(time.monotonic() // TEXT_INTERVAL) - int(since // TEXT_INTERVAL)
+    t = ticks * TEXT_INTERVAL % scroll_time(text, width)
     shift = min(extra, max(0, int((t - SCROLL_PAUSE) / SCROLL_STEP)))
     return text[shift:shift + width]
 
