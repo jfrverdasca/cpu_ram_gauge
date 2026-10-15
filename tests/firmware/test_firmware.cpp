@@ -271,7 +271,7 @@ TEST(short_press_sends_click) {
   hold(BUTTON, 300);
   CHECK(printed("CLICK"));
   CHECK(!pomo);
-  CHECK(sweep == 0);
+  CHECK(sweep == NO_SWEEP);
 }
 
 TEST(no_click_without_the_script) {
@@ -346,7 +346,7 @@ TEST(hold_3s_lamp_test_stays_1s_at_100_and_1s_at_0) {
   run(900);
   CHECK(pos == POS_MIN);        // still at zero
   run(2000);
-  CHECK(sweep == 0);
+  CHECK(sweep == NO_SWEEP);
   CHECK(pos == posFor(50));     // back to the script's needle
 }
 
@@ -357,7 +357,7 @@ TEST(release_after_forced_homing_is_ignored) {
   pressed[BUTTON] = false;
   run(500);
   CHECK(!pomo);
-  CHECK(sweep == 0);
+  CHECK(sweep == NO_SWEEP);
   CHECK(!printed("POMODORO ON"));
   CHECK(!printed("TEST"));
   hold(BUTTON, 1200);           // the next press works
@@ -455,7 +455,7 @@ TEST(lamp_test_goes_back_to_the_pomodoro) {
   startPomodoro("M5 1 1 4");
   hold(BUTTON, 3200);
   run(6000);
-  CHECK(sweep == 0);
+  CHECK(sweep == NO_SWEEP);
   CHECK(pomo);
   CHECK(abs(pos - pomoPos()) <= 1);
 }

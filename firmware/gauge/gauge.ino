@@ -61,9 +61,9 @@ const unsigned long START_US = 5000;      // first step from rest
 const unsigned long MIN_UP_US = 2000;
 const unsigned long MIN_DOWN_US = 3000;
 const unsigned long HOMING_US = 5000;
-// Phase whose rest position is just below the zero stop (calibrate with step_counter).
-// Ending the homing on it always seats the rotor against the stop; any other phase can
-// leave it up to half an electrical cycle (4 half-steps) above. -1 = not calibrated.
+// Phase whose rest position is just below the zero stop (calibrate with step_counter
+// for a new motor). Ending the homing on it always seats the rotor against the stop;
+// any other phase can leave it up to half an electrical cycle (4 half-steps) above.
 const int8_t HOME_PHASE = 6;              // bench-calibrated, direct drive (3 runs)
 const uint8_t RAMP = 12;                  // steps from START_US to full speed
 const uint8_t DEAD_ZONE = 2;
@@ -105,8 +105,11 @@ const int SETTINGS_ADDR = 12;   // EEPROM, after the zone
 
 enum PomoPhase : uint8_t { FOCUS, BREAK, LONG_BREAK };
 enum PomoState : uint8_t { RUNNING, PAUSED, OVER };   // OVER: waits for a click
-
-struct Button { uint8_t pin; bool raw, down, skip; unsigned long changedMs, pressedMs; };
+// Lamp test: pending (the LCD goes first), up, a second at the top, down, a second at
+// the bottom
+enum Sweep : uint8_t { NO_SWEEP, SWEEP_PENDING, SWEEP_UP, SWEEP_TOP, SWEEP_DOWN, SWEEP_BOTTOM };
+// What releasing the button does, by how long it was held
+enum Press : uint8_t { SHORT_PRESS, POMODORO_PRESS, TEST_PRESS };
 
 int pos = 0, target = 0;
 int8_t dir = 0;
@@ -130,12 +133,12 @@ char text[2][17];               // LCD rows from gauge.py
 uint8_t glyphs[8][8];           // LCD custom characters from gauge.py
 uint8_t glyphsChanged = 0;      // one bit per character, written by updateLcd()
 bool parked = false;            // EEPROM holds the current position
-// 0 = off, 1 = lamp test pending, 2 = going up, 3 = at the top, 4 = going down,
-// 5 = at the bottom
-uint8_t sweep = 0;
+Sweep sweep = NO_SWEEP;
 unsigned long sweepMs = 0;      // reached the top or the bottom
-Button mainButton = {BUTTON};
-uint8_t holding = 0;            // main button held: 0 = no, 1 = Pomodoro, 2 = lamp test
+bool buttonRaw = false, buttonDown = false;
+bool buttonSkip = false;        // held while powering up: its release is ignored
+unsigned long buttonChangedMs = 0, buttonPressedMs = 0;
+Press holding = SHORT_PRESS;    // held long enough to show what releasing will do
 unsigned long wokeMs = 0;       // last press that woke the LCD
 bool screenOn = true;
 uint8_t brightness = 255;       // from gauge.py
@@ -247,7 +250,7 @@ void fullHoming() {
     applyPhase();
     delayMicroseconds(HOMING_US);
   }
-  while (HOME_PHASE >= 0 && phase != HOME_PHASE) {
+  while (phase != HOME_PHASE) {
     phase = (phase + 7) % 8;
     applyPhase();
     delay(20);
@@ -328,9 +331,12 @@ void civilFromDays(int32_t z, int16_t& y, uint8_t& m, uint8_t& d) {
   y = yoe + era * 400 + (m <= 2);
 }
 
+// 0 = Sunday. 1970-01-01 was a Thursday.
+uint8_t weekday(int32_t days) { return (days + 4) % 7; }
+
 int32_t lastSunday(int16_t y, uint8_t m) {
   int32_t d = daysFromCivil(y, m, 31);
-  return d - (d + 4) % 7;       // 1970-01-01 was a Thursday
+  return d - weekday(d);
 }
 
 // EU summer time: from the last Sunday of March to the last Sunday of October, 01:00 UTC.
@@ -359,7 +365,7 @@ void setClock(uint32_t utc) {
   uint8_t m, d;
   uint32_t days = utc / 86400, s = utc % 86400;
   civilFromDays(days, y, m, d);
-  uint8_t r[7] = {bcd(s % 60), bcd(s / 60 % 60), bcd(s / 3600), (uint8_t)((days + 4) % 7 + 1),
+  uint8_t r[7] = {bcd(s % 60), bcd(s / 60 % 60), bcd(s / 3600), (uint8_t)(weekday(days) + 1),
                   bcd(d), bcd(m), bcd(y - 2000)};
   rtcWrite(0x00, r, 7);
   uint8_t status = 0;           // clears the oscillator-stopped flag, 32 kHz output off
@@ -582,40 +588,43 @@ void readSerial() {
 }
 
 // Debounced; true when the button was just pressed or released.
-bool debounce(Button& b) {
-  bool now = digitalRead(b.pin) == LOW;
-  if (now != b.raw) {
-    b.raw = now;
-    b.changedMs = millis();
+bool debounce() {
+  bool now = digitalRead(BUTTON) == LOW;
+  if (now != buttonRaw) {
+    buttonRaw = now;
+    buttonChangedMs = millis();
   }
-  if (millis() - b.changedMs < DEBOUNCE_MS || b.raw == b.down) return false;
-  b.down = b.raw;
-  if (b.down) b.pressedMs = millis();
+  if (millis() - buttonChangedMs < DEBOUNCE_MS || buttonRaw == buttonDown) return false;
+  buttonDown = buttonRaw;
+  if (buttonDown) buttonPressedMs = millis();
   return true;
+}
+
+Press pressKind() {
+  unsigned long held = millis() - buttonPressedMs;
+  return held >= TEST_PRESS_MS ? TEST_PRESS : held >= POMODORO_PRESS_MS ? POMODORO_PRESS : SHORT_PRESS;
 }
 
 bool scriptRunning() { return lastLineMs && millis() - lastLineMs < SCRIPT_MS; }
 
 void startTest() {
-  sweep = 1;
+  sweep = SWEEP_PENDING;
   beep(1);
   Serial.println(F("TEST"));
 }
 
-// The main button acts on release, by how long it was held.
+// The button acts on release, by how long it was held.
 void readButtons() {
-  Button& b = mainButton;
-  if (debounce(b) && !b.down) {
-    unsigned long held = millis() - b.pressedMs;
-    if (b.skip) b.skip = false;   // the press that forced the homing
-    else if (held >= TEST_PRESS_MS) startTest();
-    else if (held >= POMODORO_PRESS_MS) togglePomodoro();
+  if (debounce() && !buttonDown) {
+    Press press = pressKind();
+    if (buttonSkip) buttonSkip = false;   // the press that forced the homing
+    else if (press == TEST_PRESS) startTest();
+    else if (press == POMODORO_PRESS) togglePomodoro();
     else if (pomo) pomodoroClick();
     else if (!screenOn) wokeMs = millis();
     else if (scriptRunning()) Serial.println(F("CLICK"));
   }
-  unsigned long held = millis() - b.pressedMs;
-  holding = !b.down || b.skip ? 0 : held >= TEST_PRESS_MS ? 2 : held >= POMODORO_PRESS_MS ? 1 : 0;
+  holding = buttonDown && !buttonSkip ? pressKind() : SHORT_PRESS;
 }
 
 // ---------------------------------------------------------------- logic
@@ -632,18 +641,17 @@ int posFor(float percent) {
 }
 
 void updateTarget() {
-  if (sweep == 1) return;       // the needle finishes its move, then updateLcd() goes on
-  // Up, a second at the top, down, a second at the bottom
-  if (sweep == 2 || sweep == 4) {
-    target = sweep == 2 ? POS_MAX : POS_MIN;
+  if (sweep == SWEEP_PENDING) return;   // the needle finishes its move, then updateLcd() goes on
+  if (sweep == SWEEP_UP || sweep == SWEEP_DOWN) {
+    target = sweep == SWEEP_UP ? POS_MAX : POS_MIN;
     if (stopped()) {
-      sweep++;
+      sweep = sweep == SWEEP_UP ? SWEEP_TOP : SWEEP_BOTTOM;
       sweepMs = millis();
     }
     return;
   }
-  if (sweep == 3 || sweep == 5) {
-    if (millis() - sweepMs >= TEST_HOLD_MS) sweep = sweep == 3 ? 4 : 0;
+  if (sweep == SWEEP_TOP || sweep == SWEEP_BOTTOM) {
+    if (millis() - sweepMs >= TEST_HOLD_MS) sweep = sweep == SWEEP_TOP ? SWEEP_DOWN : NO_SWEEP;
     return;
   }
 
@@ -727,7 +735,7 @@ void showPomodoro() {
 void updateLcd() {
   static unsigned long lastMs = 0;
   // A pending lamp test goes out as soon as the needle is still
-  if (stepping() || (millis() - lastMs < LCD_REFRESH_MS && sweep != 1)) return;
+  if (stepping() || (millis() - lastMs < LCD_REFRESH_MS && sweep != SWEEP_PENDING)) return;
   lastMs = millis();
 
   for (uint8_t n = 0; n < 8; n++) {
@@ -738,9 +746,9 @@ void updateLcd() {
   // Off a minute after the last data, or when gauge.py sets 0. A press wakes it
   // anyway. gauge.py's brightness only while it sends data; full otherwise.
   static uint8_t backlight = 255;
-  bool on = sweep || holding || pomo || (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
+  bool on = sweep != NO_SWEEP || holding != SHORT_PRESS || pomo || (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
             millis() - wokeMs < WAKE_MS;
-  uint8_t level = !on ? 0 : (sweep || brightness == 0 || !online()) ? 255 : brightness;
+  uint8_t level = !on ? 0 : (sweep != NO_SWEEP || brightness == 0 || !online()) ? 255 : brightness;
   if (level != backlight) {
     backlight = level;
     analogWrite(LCD_LIGHT, level);
@@ -754,15 +762,15 @@ void updateLcd() {
     if (show) lcd.display();
     else lcd.noDisplay();
   }
-  if (sweep) {
-    if (sweep == 1) {
+  if (sweep != NO_SWEEP) {
+    if (sweep == SWEEP_PENDING) {
       showAllPixels();
-      sweep = 2;                // now the needle can start
+      sweep = SWEEP_UP;         // now the needle can start
     }
     return;
   }
-  if (holding) {
-    printRow(0, holding == 2 ? F("Test") : pomo ? F("Exit pomodoro") : F("Start pomodoro"));
+  if (holding != SHORT_PRESS) {
+    printRow(0, holding == TEST_PRESS ? F("Test") : pomo ? F("Exit pomodoro") : F("Start pomodoro"));
     printRow(1, F(""));
     return;
   }
@@ -781,7 +789,7 @@ void updateLcd() {
     char row[17];
     timeRow(row);
     printRow(0, row);
-    snprintf(row, sizeof(row), " %.3s %02u/%02u/%d", DAYS + (days + 4) % 7 * 3, d, m, y);
+    snprintf(row, sizeof(row), " %.3s %02u/%02u/%d", DAYS + weekday(days) * 3, d, m, y);
     printRow(1, row);
     return;
   }
@@ -816,7 +824,7 @@ void setup() {
   if (digitalRead(BUTTON) == LOW || !restoreParked()) {
     if (digitalRead(BUTTON) == LOW) {
       // Still held after the homing: its release must not count as a press
-      mainButton.raw = mainButton.down = mainButton.skip = true;
+      buttonRaw = buttonDown = buttonSkip = true;
     }
     lcd.print(F("Homing..."));
     fullHoming();
