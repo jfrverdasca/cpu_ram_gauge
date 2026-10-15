@@ -68,7 +68,11 @@ RAM usage, driven by an Arduino over serial.
   - **Row 1 is contextual** (2026-10-09): uptime and network normally; with
     the needle's metric (system total) above 60% CPU / 80% RAM, the app using
     the most of it and that app's own share, in the same layout as row 0
-    (`▣ 38% Code`), until it drops below 50% CPU / 75% RAM.
+    (`▣ 38% Code`), until it drops below 50% CPU / 75% RAM. For RAM, the
+    app's size instead of its share (2026-10-15): `▣ 2.6G Firefox`, `850M`
+    below 1 GB, one letter as the network rate's to leave room for the name.
+    It's the summed RSS, not Activity Monitor's "Memory" (footprint, with
+    compressed memory: for Firefox 6.7 GB against 2.6 GB RSS).
     The icon is an app window (2026-10-10), not the metric's: with the same
     layout on both rows, a metric icon on both made the PC's total and the
     app's share easy to mix up. The metric is known (the needle's). Tried an

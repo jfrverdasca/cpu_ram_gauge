@@ -136,11 +136,17 @@ class Helpers(unittest.TestCase):
         # Past hot, row 1 shows the app behind the needle
         p.hot_cpu = p.fresh_cpu = True
         self.assertEqual(p.rows(Context(0, "CPU", False))[1], f"{system.APP_ICON} 5% Code")
+        p.hot_ram = True  # RAM's in bytes
+        with mock.patch.object(system, "_ram_total", 16 * 2**30):
+            self.assertEqual(p.rows(Context(0, "RAM", False))[1], f"{system.APP_ICON} 1.6G Firefox")
+        self.assertEqual(system.size(850 * 2**20), "850M")
+        self.assertEqual(system.size(999.6 * 2**20), "1.0G")
+        self.assertEqual(system.size(1000 * 2**20), "1.0G")
 
     def test_app_names_fit_after_dropping_accents(self):
         cafe = "Cafe\u0301 Cafe\u0301 Cafe\u0301"  # decomposed, as in macOS paths
-        self.assertEqual(system.metric_row("C", 5, cafe), "C 5% Cafe Cafe C")
-        self.assertEqual(system.metric_row("C", 5, "Word\u2122"), "C 5% WordTM")
+        self.assertEqual(system.metric_row("C", "5%", cafe), "C 5% Cafe Cafe C")
+        self.assertEqual(system.metric_row("C", "5%", "Word\u2122"), "C 5% WordTM")
 
     def test_needles_of_the_base_class_are_read_only(self):
         with self.assertRaises(TypeError):
