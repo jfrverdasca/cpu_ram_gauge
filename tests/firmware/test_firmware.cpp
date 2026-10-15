@@ -91,6 +91,69 @@ TEST(needle_follows_the_script) {
   CHECK(pos == POS_MAX);
 }
 
+// The smoothed CPU from gauge.py: a reading every 50 ms, creeping towards goal.
+// Returns how often the needle stopped and the longest gap between two steps.
+static void creep(double& value, double goal, double seconds, int& stops, unsigned long& gapMs) {
+  int last = pos;
+  unsigned long lastStepMs = millis();
+  bool moving = dir != 0;
+  for (int r = 0; r < seconds * 20; r++) {
+    value = value * 0.96 + goal * 0.04;
+    send("N" + std::to_string(value));
+    for (int ms = 0; ms < 50; ms++) {
+      run(1);
+      if (pos != last) {
+        if (moving && millis() - lastStepMs > gapMs) gapMs = millis() - lastStepMs;
+        last = pos;
+        lastStepMs = millis();
+        moving = true;
+      }
+      if (moving && dir == 0) {
+        stops++;
+        moving = false;
+      }
+    }
+  }
+}
+
+TEST(follows_a_creeping_target_without_stopping) {
+  boot();
+  feed = "N10";
+  run(3000);
+  feed = "";
+  double value = 10;
+  int stops = 0;
+  unsigned long gapMs = 0;
+  creep(value, 90, 0.5, stops, gapMs);  // the fast part: ~8 steps a reading
+  CHECK(gapMs < 20);            // steps come evenly, not in a burst per reading
+  creep(value, 90, 1, stops, gapMs);
+  CHECK(stops == 0);            // stopping and settling each reading made it jerk
+  creep(value, 90, 5, stops, gapMs);
+  CHECK(pos == target);
+  CHECK(abs(pos - posFor(90)) < DEAD_ZONE);
+}
+
+TEST(reversing_still_settles) {
+  boot();
+  feed = "N50";
+  run(3000);
+  feed = "";
+  send("N80");
+  run(100);                     // on its way up
+  CHECK(dir == 1);
+  send("N20");
+  int last = pos;
+  unsigned long lastUpMs = 0, firstDownMs = 0;
+  for (int ms = 0; ms < 2000 && !firstDownMs; ms++) {
+    run(1);
+    if (pos > last) lastUpMs = millis();
+    if (pos < last) firstDownMs = millis();
+    last = pos;
+  }
+  CHECK(firstDownMs > 0);
+  CHECK(firstDownMs - lastUpMs >= SETTLE_MS);
+}
+
 TEST(lcd_shows_the_script_rows) {
   boot();
   feed = "N50";

@@ -288,6 +288,31 @@ RAM usage, driven by an Arduino over serial.
   nothing after a longer pause. Then 3 heavy Spotlight searches (needle near 100%):
   back at zero every time. That other motor is the one mounted now: its
   `HOME_PHASE` is the old motor's, kept (to-do 13).
+- **Following a creeping target** (2026-10-15): the CPU climbed in jerks, RAM
+  smoothly. RAM jumps to its value at once; the CPU is smoothed in
+  `gauge.py`, so its target creeps up every 50 ms, less each time. The motor
+  is faster: it caught up, stopped, waited the 60 ms and started from the
+  ramp's foot, ~every 100 ms. In the simulator, 10% → 90%: 35 stops and 3.1 s
+  standing still out of 3.9 s (RAM: 1 stop). Two changes:
+  - Caught up, it keeps the phase and the direction up to `FOLLOW_MS`
+    before stopping; a target moving on in the same direction goes on with
+    no settle. Reversing and starting from rest still settle 60 ms.
+  - The target slides from where it was going to each new reading over the
+    50 ms until the next (`slidingNeedle()`), so the steps of a reading come
+    evenly instead of in one burst.
+  Simulator: 0 stops during the climb. The 60 ms came from steps lost
+  falling at ~5 steps a reading, which this brings back in a milder form (no
+  hard stop): `tests/hardware/needle_cycles.py` climbs and falls like the CPU
+  50 times, then the needle has to sit exactly on 0%. It did.
+  On the gauge the middle of a move was smooth, the ends still jerked (the
+  end most): the dead zone, on the sliding target, let it move in pairs, and
+  with 150 ms it stopped (settle, coils off and back on) as the climb slowed.
+  So the dead zone moved to the readings (one within 2 steps of the last is
+  left out; the slide then goes a step at a time) and `FOLLOW_MS` to 400 ms.
+  The LCD and the clock only update while the needle is still: caught up
+  counts as still (`stepping()`), or a slow, steady move (the Pomodoro's)
+  would freeze the LCD. On the gauge: no more jerks at the ends, and 50
+  cycles again ended exactly on 0%.
 - **`HOME_PHASE = 6`** (2026-10-03, direct drive, 3 identical measurements;
   `MAGIC` changed to `0xA9`). With this, homing always ends in the same
   place, even after pulling the plug.
