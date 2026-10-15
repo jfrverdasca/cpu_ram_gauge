@@ -14,6 +14,7 @@ import re
 import string
 import threading
 from collections import deque, namedtuple
+from concurrent.futures import Future
 from email.utils import parseaddr
 
 import lcd
@@ -120,7 +121,7 @@ class Email(Plugin):
         self.queue = deque()  # Messages to show, oldest first
         self.total = 0        # new ones in this batch, shown or not
         self.showing = None   # a Showing
-        self.thread = self.result = self.error = None
+        self.future = self.error = None  # future: the poll running or not taken in yet
 
     def start(self):
         account = [os.environ.get(k) for k in ("EMAIL_HOST", "EMAIL_USER", "EMAIL_PASSWORD")]
@@ -132,33 +133,32 @@ class Email(Plugin):
     def update(self, ctx):
         if not self.account:
             return
-        # Alive first: a poll that ends between the two would leave its result for
-        # later, and the next poll would start from the same last UID
-        if self.thread and self.thread.is_alive():
-            return
         self.collect()
+        if self.future:  # still polling
+            return
         first = self.queue[0].uid if self.queue else float("inf")
         args = (*self.account, self.folder, self.last, self.validity, first, self.max_shown)
-        self.thread = threading.Thread(target=self.poll, args=args, daemon=True)
-        self.thread.start()
+        self.future = Future()
+        # Not a ThreadPoolExecutor: its threads aren't daemons, and Ctrl+C would wait
+        # for a poll stuck on the network
+        threading.Thread(target=self.poll, args=(self.future, *args), daemon=True).start()
 
-    def poll(self, *args):
+    @staticmethod
+    def poll(future, *args):
         try:
-            self.result = fetch(*args)
+            future.set_result(fetch(*args))
         except Exception as e:  # network, login, server: tried again next poll
-            self.result = e
+            future.set_exception(e)
 
     def collect(self):
-        """Takes in the last poll's result, once its thread has ended: before that,
-        the thread could write it between the two halves of the swap below, and it
-        would be lost."""
-        if not self.thread or self.thread.is_alive():
+        """Takes in the last poll's result, once it has ended."""
+        if not (self.future and self.future.done()):
             return
-        result, self.result = self.result, None
-        if result is None:
-            return
-        if isinstance(result, Exception):
-            error = f"Email: {str(result) or type(result).__name__}"
+        future, self.future = self.future, None
+        try:
+            result = future.result()
+        except Exception as e:
+            error = f"Email: {str(e) or type(e).__name__}"
             if error != self.error:
                 print(error)
             self.error = error
