@@ -150,8 +150,78 @@ TEST(reversing_still_settles) {
     if (pos < last) firstDownMs = millis();
     last = pos;
   }
+  CHECK(lastUpMs > 0);          // it was still going up
   CHECK(firstDownMs > 0);
   CHECK(firstDownMs - lastUpMs >= SETTLE_MS);
+}
+
+// The needle's % for a position, so a reading can put the target exactly there.
+static float percentAt(int p) { return (p - POS_MIN) * 100.0 / (POS_MAX - POS_MIN); }
+
+TEST(reversing_right_after_reaching_the_target_still_settles) {
+  boot();
+  feed = "N50";
+  run(3000);
+  feed = "";
+  send("N60");
+  for (int ms = 0; ms < 1000 && !caughtUp; ms++) run(1);
+  CHECK(caughtUp);
+  unsigned long reachedMs = millis();
+  run(10);                      // the rotor still rings
+  send("N40");
+  int last = pos;
+  unsigned long firstDownMs = 0;
+  for (int ms = 0; ms < 500 && !firstDownMs; ms++) {
+    run(1);
+    if (pos < last) firstDownMs = millis();
+  }
+  CHECK(firstDownMs > 0);
+  CHECK(firstDownMs - reachedMs >= SETTLE_MS);
+}
+
+TEST(going_on_after_an_abrupt_stop_settles) {
+  boot();
+  feed = "N20";
+  run(3000);
+  feed = "";
+  send("N90");
+  for (int ms = 0; ms < 1000 && speed < 6; ms++) run(1);
+  CHECK(speed >= 6);
+  needle = needleFrom = percentAt(pos + dir);  // a reading pulls the target back to here
+  for (int ms = 0; ms < 100 && !caughtUp; ms++) run(1);
+  CHECK(caughtUp && caughtUpFast);
+  unsigned long reachedMs = millis();
+  int at = pos;
+  needle = needleFrom = 90;     // and the next pushes it on
+  unsigned long nextStepMs = 0;
+  for (int ms = 0; ms < 500 && !nextStepMs; ms++) {
+    run(1);
+    if (pos != at) nextStepMs = millis();
+  }
+  CHECK(nextStepMs > 0);
+  CHECK(nextStepMs - reachedMs >= SETTLE_MS);
+}
+
+TEST(reversing_after_waiting_at_the_target_needs_no_more_settle) {
+  boot();
+  feed = "N50";
+  run(3000);
+  feed = "";
+  send("N60");
+  for (int ms = 0; ms < 1000 && !caughtUp; ms++) run(1);
+  CHECK(caughtUp);
+  run(200);                     // still for 200 ms, within FOLLOW_MS
+  CHECK(dir == 1);
+  send("N40");
+  unsigned long sentMs = millis();
+  int last = pos;
+  unsigned long firstDownMs = 0;
+  for (int ms = 0; ms < 500 && !firstDownMs; ms++) {
+    run(1);
+    if (pos < last) firstDownMs = millis();
+  }
+  CHECK(firstDownMs > 0);
+  CHECK(firstDownMs - sentMs < 20);  // not another 60 ms
 }
 
 TEST(lcd_shows_the_script_rows) {

@@ -312,7 +312,12 @@ RAM usage, driven by an Arduino over serial.
   The LCD and the clock only update while the needle is still: caught up
   counts as still (`stepping()`), or a slow, steady move (the Pomodoro's)
   would freeze the LCD. On the gauge: no more jerks at the ends, and 50
-  cycles again ended exactly on 0%.
+  cycles again ended exactly on 0%, and the needle is much quieter.
+  After review: the settle before reversing counts from the last step (still
+  at the target for a while, it reverses at once); and reaching the target
+  above the ramp's foot (a reading pulling it back mid-climb, an abrupt
+  stop) settles 60 ms before going on, in either direction. 50 cycles: on
+  0% again.
 - **`HOME_PHASE = 6`** (2026-10-03, direct drive, 3 identical measurements;
   `MAGIC` changed to `0xA9`). With this, homing always ends in the same
   place, even after pulling the plug.

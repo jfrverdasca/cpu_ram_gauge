@@ -77,6 +77,8 @@ const unsigned long SETTLE_MS = 60;
 // Caught up with the target, keep the phase and the direction this long before
 // stopping: a smoothed metric (CPU) creeps on every 50 ms, and going on from here
 // needs no settle. Stopping each time made it climb in jerks (35 stops 10% -> 90%).
+// More than RELEASE_MS: stopping after it, the coils go off at once (the rotor has been
+// still that long already)
 const unsigned long FOLLOW_MS = 400;     // the slow end of a climb too
 const unsigned long DEBOUNCE_MS = 50;
 const unsigned long POMODORO_PRESS_MS = 1000;  // hold to enter/leave the Pomodoro
@@ -113,6 +115,7 @@ bool energized = false;
 unsigned long lastStepUs = 0, stoppedMs = 0;   // stoppedMs: still on the current phase since
 unsigned long caughtUpMs = 0;   // at the target while moving, since
 bool caughtUp = false;
+bool caughtUpFast = false;      // got there above the ramp's foot: an abrupt stop
 
 float needle = 0;               // % from gauge.py
 // From where the needle was going when it came, the target slides to it over the
@@ -210,14 +213,20 @@ void updateMotor() {
     if (!caughtUp) {
       caughtUp = true;
       caughtUpMs = millis();
+      // A reading pulling the target back can end a fast climb at once
+      caughtUpFast = speed > 1;
       speed = 0;                // whatever comes next starts from the ramp's foot
     }
     if (millis() - caughtUpMs < FOLLOW_MS) return;
+  } else if (caughtUp && caughtUpFast && millis() - caughtUpMs < SETTLE_MS) {
+    return;                     // the rotor rings after an abrupt stop, going on too
   }
+  // The settle counts from the last step: waiting at the target, the rotor was still
+  unsigned long stillSince = caughtUp ? caughtUpMs : millis();
   caughtUp = false;
   if (ahead == 0 || (ahead < 0 && speed == 0)) {   // reversing: stop and settle first
     dir = 0;
-    stoppedMs = millis();
+    stoppedMs = stillSince;
     return;
   }
   if (ahead < 0 || speed > ahead) speed--;
