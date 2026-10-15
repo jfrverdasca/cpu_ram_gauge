@@ -63,7 +63,7 @@ The full pin map, wiring, current budget and bill of materials are in
 | Path | Contents |
 |---|---|
 | `firmware/gauge/` | Final Arduino sketch |
-| `firmware/step_counter/` | Bench sketch to drive the motor from the Serial Monitor (19200 baud) and calibrate it |
+| `firmware/utils/step_counter/` | Bench sketch to drive the motor from the Serial Monitor (19200 baud) and calibrate it |
 | `pc/gauge.py` | PC script that sends the readings and LCD text; settings at the top |
 | `pc/plugins/` | What the needle and the LCD show: CPU/RAM, uptime/network, email |
 | `pc/lcd.py` | LCD helpers shared by the plugins: scrolling, accents, custom characters |

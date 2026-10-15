@@ -61,7 +61,7 @@ const unsigned long START_US = 5000;      // first step from rest
 const unsigned long MIN_UP_US = 2000;
 const unsigned long MIN_DOWN_US = 3000;
 const unsigned long HOMING_US = 5000;
-// Phase whose rest position is just below the zero stop (calibrate with step_counter
+// Phase whose rest position is just below the zero stop (calibrate with utils/step_counter
 // for a new motor). Ending the homing on it always seats the rotor against the stop;
 // any other phase can leave it up to half an electrical cycle (4 half-steps) above.
 const int8_t HOME_PHASE = 6;              // bench-calibrated, direct drive (3 runs)
