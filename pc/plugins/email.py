@@ -58,8 +58,8 @@ def fetch(host, user, password, folder, last, validity, first, newest):
     """One poll. last: the highest UID seen (None for none yet); validity: its
     mailbox's UIDVALIDITY; first: the lowest UID still waiting to be shown. Returns
     (last, validity, UIDs from first on still unread or None when it didn't look, the
-    newest new unread messages, up to newest of them, how many new unread ones were
-    left out)."""
+    newest new unread messages, up to newest of them, how many new unread ones there
+    are, shown or not)."""
     # Quoted: imaplib sends it as is, and a name with spaces ("[Gmail]/All Mail") fails
     folder = '"' + folder.replace("\\", "\\\\").replace('"', '\\"') + '"'
     with imaplib.IMAP4_SSL(host, timeout=30) as imap:
@@ -92,8 +92,7 @@ def fetch(host, user, password, folder, last, validity, first, newest):
                     uid = re.search(rb"UID (\d+)", part[0]) or re.search(rb"UID (\d+)", after)
                     if uid:  # without it, skipped: last still moves on, from STATUS
                         messages.append(parse_headers(int(uid.group(1)), part[1]))
-        return (max([top, last] + new), validity, unread, sorted(messages),
-                len(new) - len(wanted))
+        return max([top, last] + new), validity, unread, sorted(messages), len(new)
 
 
 class Email(Plugin):
@@ -103,8 +102,9 @@ class Email(Plugin):
     {icon} stays still; the rest scrolls. E.g. rows=("{icon} {count}", "{sender} -
     {subject}") or rows=(None, "{sender} - {subject}").
     count: the text for one and for more, {n} the number. It's the batch's: the mail
-    that came in since the LCD had none, left-out ones included, and it stays the
-    same while the batch shows.
+    that came in since the LCD had none, left-out ones included. Mail that comes
+    while the batch shows joins it: the number changes between messages, never
+    during one.
     max_shown: when more are new (after a Pomodoro, or the computer asleep), only the
     newest max_shown show. min_seconds: how long a message that fits stays.
     interval: seconds between polls (in a thread: the needle never waits)."""
@@ -166,11 +166,12 @@ class Email(Plugin):
         if self.error:
             print("Email: back")
         self.error = None
-        self.last, self.validity, unread, messages, left_out = result
+        # new: all of them, also those left out or whose headers didn't come
+        self.last, self.validity, unread, messages, new = result
         if unread is not None:  # those read elsewhere meanwhile go
             self.queue = deque(m for m in self.queue if m.uid in unread)
         self.queue.extend(messages)
-        self.total += len(messages) + left_out
+        self.total += new
         while len(self.queue) > self.max_shown:
             self.queue.popleft()
 

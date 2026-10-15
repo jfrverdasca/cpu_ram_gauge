@@ -257,7 +257,7 @@ class FakeIMAP:
     def __init__(self, mail):
         self.mail = mail
         self.searches = 0
-        self.uids = True  # FETCH answers say which UID
+        self.no_uid = set()  # UIDs whose FETCH answer doesn't say which UID
         self.validity = 7
         self.folders = []  # as sent
 
@@ -294,7 +294,7 @@ class FakeIMAP:
         data = []
         for u in map(int, args[0].split(",")):
             sender, subject = self.mail[u][:2]
-            data += [(f"{u} ({f'UID {u} ' if self.uids else ''}BODY[HEADER] {{99}}".encode(),
+            data += [(f"{u} ({'' if u in self.no_uid else f'UID {u} '}BODY[HEADER] {{99}}".encode(),
                       f"From: {sender}\r\nSubject: {subject}\r\n\r\n".encode()), b")"]
         return "OK", data
 
@@ -432,7 +432,7 @@ class EmailPlugin(unittest.TestCase):
 
     def test_a_message_without_uid_is_skipped(self):
         p = self.plugin()
-        self.imap.uids = False
+        self.imap.no_uid = {2}
         self.mail[2] = ["A <a@x.pt>", "One", False]
         self.poll(p)
         self.assertEqual(self.rows(p), (None, None))
@@ -445,6 +445,13 @@ class EmailPlugin(unittest.TestCase):
         p.result = (5, 7, None, [], 0)  # may be half written: not taken yet
         p.collect()
         self.assertEqual((p.last, p.result), (1, (5, 7, None, [], 0)))
+
+    def test_count_includes_mail_whose_headers_didnt_come(self):
+        p = self.plugin(rows=("{icon} {count}", "{subject}"))
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
+        self.imap.no_uid = {2}
+        self.poll(p)
+        self.assertEqual(self.rows(p), (f"{email_plugin.ENVELOPE_ICON} 2 new emails", "Two"))
 
     def test_max_shown_0_shows_none(self):
         p = self.plugin(max_shown=0)
