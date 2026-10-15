@@ -314,7 +314,7 @@ PC → Arduino:
 | `N45.3` | needle, % (every 50 ms; also the sign the script is alive) |
 | `T<row><text>` | LCD row `0`/`1` (when it changes) |
 | `G<0-7><16 hex>` | 5×8 custom character, top row first; in text use `chr(n)`, except slot 0, which is `chr(8)` (byte 0 would end the line). Don't use `8 + n` for the others: 10 and 13 are `\n` and `\r` |
-| `B<0-255>` | lighting brightness (PWM on D10), used only while data arrives (255 during the sweep and with no data); `0` turns the LCD off (when the screen sleeps or wakes; `B0` every 5 s while asleep) |
+| `B<0-255>` | lighting brightness (PWM on D10), used only while data arrives (255 during the sweep and with no data; the script sends 255 while a plugin notifies); `0` turns the LCD off (when the screen sleeps or wakes; `B0` every 5 s while asleep) |
 | `P` | park; the Arduino replies `PARKED` (`POMODORO ON` in the Pomodoro: the needle stays) |
 | `Z<UTC seconds> <offset> <0/1>` | time for the clock module: UTC, standard offset in minutes, whether the zone has (EU) summer time (hourly) |
 | `M<focus> <break> <long break> <cycles>` | Pomodoro minutes (1–99) and focus sessions before the long break (1–9); EEPROM |
@@ -422,6 +422,11 @@ Pomodoro, clicks, the `Needle: ...` notice and putting the rows together.
   the Pomodoro, so they cost nothing then; `resume()` lets them drop figures
   that would span the pause. A plugin hidden by the ones before it isn't
   asked for its rows, so what it would show waits.
+- **Notifications** (2026-10-15): `notifying()` (`False` by default; email:
+  while a message shows) puts the LCD's light at 255 meanwhile, then back to
+  `BRIGHTNESS`. Fixed at 255 for every plugin, no setting. `B` goes only when
+  the level changes; entering the Pomodoro brings it back at once (the
+  Arduino uses the script's brightness there too).
 - **Plugins:** `system` (CPU and RAM needles, the other metric and top app
   on row 0, the hot app on row 1; moved unchanged), `status` (uptime and
   network on row 1), `email`.

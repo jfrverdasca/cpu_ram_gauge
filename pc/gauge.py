@@ -55,7 +55,7 @@ PLUGINS = [
     System(),
     Status(),
 ]
-BRIGHTNESS = 128      # LCD backlight, 1-255
+BRIGHTNESS = 128      # LCD backlight, 1-255 (full while a plugin notifies)
 NOTICE = 3            # seconds "Needle: RAM" stays on row 0 after a click
 
 # Pomodoro, run by the Arduino (also without this script); saved there
@@ -237,6 +237,7 @@ def main():
     # holds 64 bytes and it stops reading for ~10 ms while it redraws the LCD
     queue = deque()
     sent_rows = [None, None]  # LCD rows as last queued
+    light = BRIGHTNESS        # backlight as last queued
     glyphs = lcd.Glyphs()
     rx = b""
 
@@ -277,6 +278,9 @@ def main():
                     elif line in (b"POMODORO ON", b"POMODORO OFF"):
                         print(line.decode().capitalize())
                         pomodoro = line == b"POMODORO ON"
+                        if pomodoro and light != BRIGHTNESS:  # no notifications in it
+                            light = BRIGHTNESS
+                            queue.append(f"B{light}\n")
                         if not pomodoro:
                             # Back at once: the LCD still has the text from before
                             sent_rows = [None, None]
@@ -289,6 +293,7 @@ def main():
                         pomodoro = False
                         resume(now)
                     queue.extend(setup_lines(awake))
+                    light = BRIGHTNESS if awake else 0
                     sent_rows = [None, None]
                     glyphs.reset()  # the LCD lost them
                     next_check = next_text = 0
@@ -299,6 +304,7 @@ def main():
                         awake = not awake
                         print("Screen on." if awake else "Screen asleep: parking.")
                         queue.append(f"B{BRIGHTNESS}\n" if awake else "B0\nP\n")
+                        light = BRIGHTNESS if awake else 0
                         if awake:
                             resume(now)
                     elif not awake:
@@ -334,6 +340,10 @@ def main():
                                     sent_rows[row] = text
                                     queue = deque(l for l in queue if not l.startswith(f"T{row}"))
                                     queue.append(text_line(row, lcd_text[row]))
+                        level = 255 if any(p.notifying(ctx) for p in PLUGINS) else BRIGHTNESS
+                        if level != light:
+                            light = level
+                            queue.append(f"B{light}\n")
                         next_text = lcd.next_update(now)
                 if queue:
                     s.write(queue.popleft().encode())
