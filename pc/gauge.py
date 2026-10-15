@@ -51,7 +51,7 @@ from plugins.system import System
 # plugins' needles, in this order (System: CPU, then RAM). Each LCD row shows the
 # first plugin here with something for it. Each plugin's options are in its file.
 PLUGINS = [
-    Email(rows=("{icon} {sender}", "{subject}")),  # or rows=(None, "{sender} - {subject}")
+    Email(rows=("{icon} {count}", "{sender} - {subject}")),  # or rows=(None, "{sender} - {subject}")
     System(),
     Status(),
 ]

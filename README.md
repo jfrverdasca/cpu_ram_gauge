@@ -95,12 +95,14 @@ Gmail, an app password. Without it the email plugin stays off. The layout is set
 `PLUGINS` at the top of `pc/gauge.py`:
 
 ```python
-Email(rows=("{icon} {sender}", "{subject}"))   # sender on row 0, subject on row 1
-Email(rows=(None, "{sender} - {subject}"))     # row 1 only; row 0 keeps CPU/RAM
+Email(rows=("{icon} {count}", "{sender} - {subject}"))  # "3 new emails" on row 0
+Email(rows=(None, "{sender} - {subject}"))              # row 1 only; row 0 keeps CPU/RAM
 ```
 
-It checks every minute and never marks anything as read. After a Pomodoro or the
-computer sleeping, the 3 newest show one by one, then "+N emails" for the rest.
+It checks every minute and never marks anything as read. New mail shows one at a
+time, for 5 s or until its row has scrolled through. `{count}` is how many came in
+this batch, the same while they show. After a Pomodoro or the computer sleeping,
+only the 3 newest show; the count includes the rest.
 
 ### Plugins
 

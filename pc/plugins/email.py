@@ -1,5 +1,5 @@
 """Incoming email, read over IMAP: each new unread message shows for as long as its
-longest row takes to scroll through once.
+longest row takes to scroll through once, with how many came in.
 
 The account comes from .env (or the environment): EMAIL_HOST, EMAIL_USER and
 EMAIL_PASSWORD (for Gmail, an app password). Without them the plugin stays idle.
@@ -30,8 +30,8 @@ ENVELOPE_ICON = lcd.glyph([
     "....."])
 
 Message = namedtuple("Message", "uid sender address subject")
-# On the LCD: a Message, or the summary's count
-Showing = namedtuple("Showing", "item rows fixed since until")
+# On the LCD: a Message
+Showing = namedtuple("Showing", "message rows fixed since until")
 
 
 def fixed_length(template, icon):
@@ -98,25 +98,27 @@ def fetch(host, user, password, folder, last, validity, first, newest):
 
 class Email(Plugin):
     """rows: a template per LCD row, None for a row it leaves to the next plugin.
-    Fields: {icon}, {sender} (name, else address), {address}, {subject}. What comes
-    before the first field other than {icon} stays still; the rest scrolls.
-    E.g. rows=("{icon} {sender}", "{subject}") or rows=(None, "{sender} - {subject}").
+    Fields: {icon}, {count} (how many came in, from count), {sender} (name, else
+    address), {address}, {subject}. What comes before the first field other than
+    {icon} stays still; the rest scrolls. E.g. rows=("{icon} {count}", "{sender} -
+    {subject}") or rows=(None, "{sender} - {subject}").
+    count: the text for one and for more, {n} the number. It's the batch's: the mail
+    that came in since the LCD had none, left-out ones included, and it stays the
+    same while the batch shows.
     max_shown: when more are new (after a Pomodoro, or the computer asleep), only the
-    newest max_shown show, then summary for summary_seconds, on the first row rows
-    uses. min_seconds: how long a message that fits stays. interval: seconds between
-    polls (in a thread: the needle never waits)."""
+    newest max_shown show. min_seconds: how long a message that fits stays.
+    interval: seconds between polls (in a thread: the needle never waits)."""
 
-    def __init__(self, rows=("{icon} {sender}", "{subject}"), summary="{icon} +{count} emails",
-                 max_shown=3, summary_seconds=5, min_seconds=5, interval=60,
-                 icon=ENVELOPE_ICON, folder="INBOX"):
-        self.templates, self.summary = rows, summary
-        self.max_shown, self.summary_seconds = max_shown, summary_seconds
-        self.min_seconds, self.interval = min_seconds, interval
+    def __init__(self, rows=("{icon} {count}", "{sender} - {subject}"),
+                 count=("{n} new email", "{n} new emails"), max_shown=3, min_seconds=5,
+                 interval=60, icon=ENVELOPE_ICON, folder="INBOX"):
+        self.templates, self.count = rows, count
+        self.max_shown, self.min_seconds, self.interval = max_shown, min_seconds, interval
         self.icon, self.folder = icon, folder
         self.account = None
         self.last = self.validity = None
         self.queue = deque()  # Messages to show, oldest first
-        self.extra = 0        # new ones left out, for the summary
+        self.total = 0        # new ones in this batch, shown or not
         self.showing = None   # a Showing
         self.thread = self.result = self.error = None
 
@@ -168,19 +170,14 @@ class Email(Plugin):
         if unread is not None:  # those read elsewhere meanwhile go
             self.queue = deque(m for m in self.queue if m.uid in unread)
         self.queue.extend(messages)
-        self.extra += left_out
+        self.total += len(messages) + left_out
         while len(self.queue) > self.max_shown:
             self.queue.popleft()
-            self.extra += 1
 
     def resume(self):
         # The Pomodoro or the sleep cut it short: shown again from the start
         if self.showing:
-            item = self.showing.item
-            if isinstance(item, Message):
-                self.queue.appendleft(item)
-            else:
-                self.extra += item
+            self.queue.appendleft(self.showing.message)
         self.showing = None
 
     def rows(self, ctx):
@@ -188,23 +185,17 @@ class Email(Plugin):
         if self.showing and ctx.now >= self.showing.until:
             self.showing = None
         if not self.showing:
-            if self.queue:
-                m = self.queue.popleft()
-                fields = dict(icon=self.icon, sender=m.sender, address=m.address, subject=m.subject)
-                rows = [t and t.format(**fields) for t in self.templates]
-                fixed = [t and fixed_length(t, self.icon) for t in self.templates]
-                seconds = max([self.min_seconds] + [lcd.scroll_time(r[f:], lcd.WIDTH - f)
-                                                    for r, f in zip(rows, fixed) if r])
-                self.showing = Showing(m, rows, fixed, ctx.now, ctx.now + seconds)
-            elif self.extra:
-                # The summary on the first row the layout uses
-                text = self.summary.format(icon=self.icon, count=self.extra)
-                rows = [None, None]
-                rows[0 if self.templates[0] else 1] = text
-                self.showing = Showing(self.extra, rows, [lcd.WIDTH] * 2, ctx.now,
-                                       ctx.now + self.summary_seconds)
-                self.extra = 0
-            else:
+            if not self.queue:
+                self.total = 0  # the batch is over
                 return None, None
+            m = self.queue.popleft()
+            count = self.count[self.total != 1].format(n=self.total)
+            fields = dict(icon=self.icon, count=count, sender=m.sender, address=m.address,
+                          subject=m.subject)
+            rows = [t and t.format(**fields) for t in self.templates]
+            fixed = [t and fixed_length(t, self.icon) for t in self.templates]
+            seconds = max([self.min_seconds] + [lcd.scroll_time(r[f:], lcd.WIDTH - f)
+                                                for r, f in zip(rows, fixed) if r])
+            self.showing = Showing(m, rows, fixed, ctx.now, ctx.now + seconds)
         s = self.showing
         return tuple(r and lcd.fit(r, f, s.since) for r, f in zip(s.rows, s.fixed))

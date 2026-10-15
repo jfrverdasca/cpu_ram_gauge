@@ -444,9 +444,14 @@ Pomodoro, clicks, the `Needle: ...` notice and putting the rows together.
   `STATUS`. Each new unread message shows until its longest row has scrolled
   through once (at least 5 s), one at a time; one read elsewhere meanwhile is
   dropped. Mail that comes during the Pomodoro or sleep shows afterwards: the
-  3 newest one by one, then `+N emails` for 5 s. Layout by templates
-  (`{icon}`, `{sender}`, `{address}`, `{subject}`), e.g. sender on row 0 and
-  subject on row 1, or `sender - subject` on row 1 only; what comes before
+  3 newest one by one. Layout by templates (`{icon}`, `{count}`, `{sender}`,
+  `{address}`, `{subject}`). Default (2026-10-15): `3 new emails` on row 0
+  and `sender - subject` scrolling on row 1, so email always takes both rows
+  (before, a `+N emails` summary on row 0 left row 1 to the hot app). The
+  count is the batch's (mail since the LCD had none, left-out ones included,
+  read-elsewhere ones still counted) and only changes between messages; it
+  replaces the `+N emails` summary. Or `sender - subject` on row 1 only,
+  leaving row 0 to CPU/RAM. What comes before
   the first field other than `{icon}` stays still. The account goes in
   `.env` (out of git; `.env.example` lists the names), read by `load_env()`
   in `gauge.py` without python-dotenv; real environment variables win. The
