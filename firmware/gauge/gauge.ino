@@ -65,6 +65,7 @@ const unsigned long HOMING_US = 5000;
 // for a new motor). Ending the homing on it always seats the rotor against the stop;
 // any other phase can leave it up to half an electrical cycle (4 half-steps) above.
 const int8_t HOME_PHASE = 6;              // bench-calibrated, direct drive (3 runs)
+static_assert(HOME_PHASE >= 0 && HOME_PHASE < 8, "HOME_PHASE: calibrate it with step_counter");
 const uint8_t RAMP = 12;                  // steps from START_US to full speed
 const uint8_t DEAD_ZONE = 2;
 
@@ -746,7 +747,8 @@ void updateLcd() {
   // Off a minute after the last data, or when gauge.py sets 0. A press wakes it
   // anyway. gauge.py's brightness only while it sends data; full otherwise.
   static uint8_t backlight = 255;
-  bool on = sweep != NO_SWEEP || holding != SHORT_PRESS || pomo || (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
+  bool on = sweep != NO_SWEEP || holding != SHORT_PRESS || pomo ||
+            (brightness > 0 && millis() - lastDataMs < SCREEN_OFF_MS) ||
             millis() - wokeMs < WAKE_MS;
   uint8_t level = !on ? 0 : (sweep != NO_SWEEP || brightness == 0 || !online()) ? 255 : brightness;
   if (level != backlight) {
