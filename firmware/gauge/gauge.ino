@@ -74,6 +74,10 @@ const unsigned long RELEASE_MS = 100;     // de-energize coils once stopped
 // it to settle, and right after a stop it is still ringing. Starting during the ringing
 // loses steps (going down most): a target falling ~5 steps every 50 ms lost dozens.
 const unsigned long SETTLE_MS = 60;
+// Caught up with the target, keep the phase and the direction this long before
+// stopping: a smoothed metric (CPU) creeps on every 50 ms, and going on from here
+// needs no settle. Stopping each time made it climb in jerks (35 stops 10% -> 90%).
+const unsigned long FOLLOW_MS = 400;     // the slow end of a climb too
 const unsigned long DEBOUNCE_MS = 50;
 const unsigned long POMODORO_PRESS_MS = 1000;  // hold to enter/leave the Pomodoro
 const unsigned long TEST_PRESS_MS = 3000;      // hold for the lamp test
@@ -107,8 +111,15 @@ int8_t dir = 0;
 uint8_t speed = 0, phase = 0;
 bool energized = false;
 unsigned long lastStepUs = 0, stoppedMs = 0;   // stoppedMs: still on the current phase since
+unsigned long caughtUpMs = 0;   // at the target while moving, since
+bool caughtUp = false;
 
 float needle = 0;               // % from gauge.py
+// From where the needle was going when it came, the target slides to it over the
+// 50 ms until the next: steps come evenly instead of in a burst per reading
+float needleFrom = 0;
+unsigned long needleMs = 0;
+const unsigned long READING_MS = 50;      // gauge.py's INTERVAL
 bool hasData = false;
 unsigned long lastDataMs = 0;
 unsigned long lastLineMs = 0;   // any line from gauge.py
@@ -159,6 +170,14 @@ void setCoils(int8_t a, int8_t b) {
 void applyPhase() { setCoils(HALF_STEP[phase][0], HALF_STEP[phase][1]); }
 
 bool stopped() { return dir == 0 && pos == target; }
+// Stepping now. Caught up and waiting for the target (FOLLOW_MS) the rotor is still:
+// slow work (LCD, I2C) can go then, or a slow, steady move would hold it off for good
+bool stepping() { return dir != 0 && !caughtUp; }
+
+float slidingNeedle() {
+  unsigned long t = millis() - needleMs;
+  return t >= READING_MS ? needle : needleFrom + (needle - needleFrom) * t / READING_MS;
+}
 
 // Non-blocking move with an acceleration ramp. If the target moves behind us,
 // decelerate first and reverse afterwards.
@@ -178,6 +197,7 @@ void updateMotor() {
     if (parked) clearParked();
     dir = target > pos ? 1 : -1;
     speed = 0;
+    caughtUp = false;
     lastStepUs = micros();
     return;
   }
@@ -186,7 +206,16 @@ void updateMotor() {
   if (now - lastStepUs < START_US - (START_US - minUs) * speed / RAMP) return;
 
   int ahead = (target - pos) * dir;
-  if (ahead == 0 || (ahead < 0 && speed == 0)) {
+  if (ahead == 0) {             // wait a little for the target to move on
+    if (!caughtUp) {
+      caughtUp = true;
+      caughtUpMs = millis();
+      speed = 0;                // whatever comes next starts from the ramp's foot
+    }
+    if (millis() - caughtUpMs < FOLLOW_MS) return;
+  }
+  caughtUp = false;
+  if (ahead == 0 || (ahead < 0 && speed == 0)) {   // reversing: stop and settle first
     dir = 0;
     stoppedMs = millis();
     return;
@@ -333,7 +362,7 @@ void setClock(uint32_t utc) {
 // I2C takes ~1 ms: only while the needle is still.
 void updateClock() {
   static unsigned long lastMs = 0;
-  if (dir != 0 || millis() - lastMs < LCD_REFRESH_MS) return;
+  if (stepping() || millis() - lastMs < LCD_REFRESH_MS) return;
   lastMs = millis();
   readClock();
   if (syncMs && rtcOk) {
@@ -453,11 +482,20 @@ void handleLine(char* s) {
   lastLineMs = millis();
   char* end;
   switch (s[0]) {
-    case 'N':
-      needle = atof(s + 1);
+    case 'N': {
+      // The dead zone is on readings: one within it of the last is noise, left out.
+      // The slide then moves one step at a time
+      float n = atof(s + 1);
+      int next = posFor(n);
+      if (abs(next - posFor(needle)) >= DEAD_ZONE || next == POS_MIN || next == POS_MAX) {
+        needleFrom = slidingNeedle();
+        needle = n;
+        needleMs = millis();
+      }
       hasData = true;
       lastDataMs = millis();
       break;
+    }
     case 'T': {
       uint8_t row = s[1] - '0';
       if (row <= 1) strlcpy(text[row], s + 2, sizeof(text[0]));
@@ -616,8 +654,7 @@ void updateTarget() {
     return;
   }
 
-  int next = posFor(needle);
-  if (abs(next - target) >= DEAD_ZONE || next == POS_MIN || next == POS_MAX) target = next;
+  target = posFor(slidingNeedle());
 }
 
 // ---------------------------------------------------------------- display
@@ -681,7 +718,7 @@ void showPomodoro() {
 void updateLcd() {
   static unsigned long lastMs = 0;
   // A pending lamp test goes out as soon as the needle is still
-  if (dir != 0 || (millis() - lastMs < LCD_REFRESH_MS && sweep != 1)) return;
+  if (stepping() || (millis() - lastMs < LCD_REFRESH_MS && sweep != 1)) return;
   lastMs = millis();
 
   for (uint8_t n = 0; n < 8; n++) {
