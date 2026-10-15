@@ -23,7 +23,8 @@ const Phase* const SEQS[] = {SEQ_X25, SEQ_FULL, SEQ_HALF};
 const uint8_t SEQ_LEN[] = {6, 4, 8};
 const char* const SEQ_NAME[] = {"X25 / SwitecX25 (6 states)", "full step (4)", "half step (8)"};
 
-// Same values as gauge.ino
+// Same values as gauge.ino, but HOME_PHASE may be -1 here: homing a new motor without
+// it, to measure the phase that goes in gauge.ino (which only takes 0-7)
 const int TRAVEL = 290;
 const int POS_MIN = 12;
 const unsigned long HOMING_US = 5000;
