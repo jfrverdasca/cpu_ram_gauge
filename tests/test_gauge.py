@@ -6,6 +6,7 @@ import sys
 import time
 import unittest
 from collections import namedtuple
+from concurrent import futures
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
@@ -328,7 +329,7 @@ class EmailPlugin(unittest.TestCase):
 
     def poll(self, p):
         p.update(Context(self.now, "CPU", False))
-        p.thread.join()
+        futures.wait([p.future])
 
     def rows(self, p, after=0):
         self.now += after
@@ -419,17 +420,12 @@ class EmailPlugin(unittest.TestCase):
                 self.rows(p)
         self.assertEqual(out.getvalue().count("AUTHENTICATIONFAILED"), 1)
 
-    def test_a_poll_ending_meanwhile_is_taken_in_first(self):
+    def test_a_finished_poll_is_taken_in_first(self):
         p = self.plugin()
         self.mail[2] = ["A <a@x.pt>", "One", False]
-        result = email_plugin.fetch("h", "u", "secret", "INBOX", p.last, p.validity, float("inf"), 3)
-
-        class Ending:  # the poll ends just as update() looks
-            def is_alive(self):
-                p.result = result
-                return False
-
-        p.thread = Ending()
+        p.future = futures.Future()  # ended, not taken in yet
+        p.future.set_result(email_plugin.fetch("h", "u", "secret", "INBOX", p.last, p.validity,
+                                               float("inf"), 3))
         with mock.patch.object(email_plugin, "fetch", wraps=email_plugin.fetch) as fetch:
             self.poll(p)
         self.assertEqual(fetch.call_args[0][4], 2)  # from the new last UID
@@ -447,10 +443,12 @@ class EmailPlugin(unittest.TestCase):
 
     def test_a_running_poll_is_left_alone(self):
         p = self.plugin()
-        p.thread = mock.Mock(is_alive=lambda: True)
-        p.result = (5, 7, None, [], 0)  # may be half written: not taken yet
-        p.collect()
-        self.assertEqual((p.last, p.result), (1, (5, 7, None, [], 0)))
+        p.future = running = futures.Future()
+        with mock.patch.object(email_plugin, "fetch") as fetch:
+            p.collect()
+            p.update(Context(self.now, "CPU", False))
+        fetch.assert_not_called()  # no second poll meanwhile
+        self.assertEqual((p.last, p.future), (1, running))
 
     def test_count_includes_mail_whose_headers_didnt_come(self):
         p = self.plugin(rows=("{icon} {count}", "{subject}"))
@@ -496,7 +494,7 @@ class EmailPlugin(unittest.TestCase):
             p.start()
         self.assertIn("Email off", out.getvalue())
         p.update(Context(self.now, "CPU", False))
-        self.assertIsNone(p.thread)
+        self.assertIsNone(p.future)
         self.assertEqual(self.rows(p), (None, None))
 
 
