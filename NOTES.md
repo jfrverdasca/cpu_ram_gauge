@@ -318,6 +318,14 @@ RAM usage, driven by an Arduino over serial.
   above the ramp's foot (a reading pulling it back mid-climb, an abrupt
   stop) settles 60 ms before going on, in either direction. 50 cycles: on
   0% again.
+- **Switching the needle** (2026-10-16): after a click `gauge.py` doesn't
+  send the new metric at once: it eases there over `SWITCH_SECONDS` (1.5 s)
+  with a smoothstep, so the needle starts and stops smoothly. It follows
+  the metric live and ends on time, also with the CPU climbing; it counts
+  seconds, not readings. Only after a click: smoothing every reading would
+  slow the CPU's needle. A restart or waking up ends it (the needle homed or
+  parked). A first version stepped 10% of the way per reading: its biggest
+  step was the first, and it lagged a climbing CPU.
 - **`HOME_PHASE = 6`** (2026-10-03, direct drive, 3 identical measurements;
   `MAGIC` changed to `0xA9`). With this, homing always ends in the same
   place, even after pulling the plug.
