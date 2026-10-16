@@ -374,38 +374,59 @@ class EmailPlugin(unittest.TestCase):
         self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False],
                           4: ["C <c@x.pt>", "Three", False]})
         self.poll(p)
-        self.assertEqual(self.rows(p)[1], "One")
+        self.assertEqual(self.rows(p)[1], "Three")  # the newest first
         self.mail[3][2] = True  # read on the phone
         self.poll(p)
-        self.assertEqual(self.rows(p, after=5.1)[1], "Three")
+        self.assertEqual(self.rows(p, after=5.1)[1], "One")
         self.assertEqual(self.rows(p, after=5.1), (None, None))
 
-    def test_backlog_shows_the_newest_with_the_total(self):
+    def test_backlog_shows_the_newest_then_the_rest(self):
         p = self.plugin(rows=("{icon} {count}", "{sender} - {subject}"))
         for u in range(2, 9):
             self.mail[u] = [f"S{u} <s@x.pt>", f"Mail {u}", False]
         self.poll(p)
-        shown = [self.rows(p, after=5.1) for _ in range(3)]
+        shown = [self.rows(p, after=5.1) for _ in range(4)]
         icon = email_plugin.ENVELOPE_ICON
-        self.assertEqual(shown, [(f"{icon} 7 new emails", f"S{u} - Mail {u}") for u in (6, 7, 8)])
+        self.assertEqual(shown, [(f"{icon} {n} new emails", f"S{u} - Mail {u}")
+                                 for n, u in ((7, 8), (6, 7), (5, 6))]
+                         + [(f"{icon} +4 new emails", "")])  # row 1 blank: no app under it
         self.assertEqual(self.rows(p, after=5.1), (None, None))
+        self.assertEqual(p.left_out, 0)
 
-    def test_count_is_the_batchs(self):
+    def test_count_counts_down(self):
+        p = self.plugin(rows=("{icon} {count}", "{subject}"), count=("{n} email", "{n} emails"))
+        icon = email_plugin.ENVELOPE_ICON
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False],
+                          4: ["C <c@x.pt>", "Three", False]})
+        self.poll(p)
+        shown = [self.rows(p, after=5.1) for _ in range(4)]
+        self.assertEqual(shown, [(f"{icon} 3 emails", "Three"), (f"{icon} 2 emails", "Two"),
+                                 (f"{icon} 1 email", "One"), (None, None)])  # no "+N"
+
+    def test_mail_coming_meanwhile_shows_next(self):
         p = self.plugin(rows=("{icon} {count}", "{subject}"), count=("{n} email", "{n} emails"))
         icon = email_plugin.ENVELOPE_ICON
         self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
         self.poll(p)
-        self.assertEqual(self.rows(p), (f"{icon} 2 emails", "One"))
+        self.assertEqual(self.rows(p), (f"{icon} 2 emails", "Two"))
         self.mail[4] = ["C <c@x.pt>", "Three", False]
-        self.poll(p)  # while the batch shows: joins it
-        self.assertEqual(self.rows(p, after=1), (f"{icon} 2 emails", "One"))  # not mid-message
-        self.mail[3][2] = True  # Two read on the phone: it goes, still counted
         self.poll(p)
-        self.assertEqual(self.rows(p, after=4.1), (f"{icon} 3 emails", "Three"))
+        self.assertEqual(self.rows(p, after=1), (f"{icon} 2 emails", "Two"))  # not mid-message
+        self.assertEqual(self.rows(p, after=4.1), (f"{icon} 2 emails", "Three"))
+        self.assertEqual(self.rows(p, after=5.1), (f"{icon} 1 email", "One"))
         self.assertEqual(self.rows(p, after=5.1), (None, None))
         self.mail[5] = ["D <d@x.pt>", "Four", False]
         self.poll(p)  # a new batch
         self.assertEqual(self.rows(p), (f"{icon} 1 email", "Four"))
+
+    def test_no_more_without_a_count_row(self):
+        p = self.plugin(rows=(None, "{sender} - {subject}"))
+        for u in range(2, 7):
+            self.mail[u] = [f"S{u} <s@x.pt>", f"Mail {u}", False]
+        self.poll(p)
+        shown = [self.rows(p, after=5.1)[1] for _ in range(4)]
+        self.assertEqual(shown, ["S6 - Mail 6", "S5 - Mail 5", "S4 - Mail 4", None])
+        self.assertEqual(p.left_out, 0)
 
     def test_nothing_new_doesnt_search(self):
         p = self.plugin()
@@ -420,6 +441,19 @@ class EmailPlugin(unittest.TestCase):
         p.resume()  # a Pomodoro started 1 s in
         self.assertEqual(self.rows(p, after=600)[1], "One")
         self.assertEqual(self.rows(p, after=4.9)[1], "One")
+
+    def test_resume_keeps_the_count_and_the_rest(self):
+        p = self.plugin(rows=("{icon} {count}", "{subject}"), max_shown=1)
+        icon = email_plugin.ENVELOPE_ICON
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
+        self.poll(p)
+        self.assertEqual(self.rows(p), (f"{icon} 2 new emails", "Two"))
+        p.resume()
+        self.assertEqual(self.rows(p, after=600), (f"{icon} 2 new emails", "Two"))
+        self.assertEqual(self.rows(p, after=5.1), (f"{icon} +1 new email", ""))
+        p.resume()
+        self.assertEqual(self.rows(p, after=600), (f"{icon} +1 new email", ""))
+        self.assertEqual(self.rows(p, after=5.1), (None, None))
 
     def test_errors_are_printed_once(self):
         p = self.plugin()
@@ -467,7 +501,9 @@ class EmailPlugin(unittest.TestCase):
         self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
         self.imap.no_uid = {2}
         self.poll(p)
-        self.assertEqual(self.rows(p), (f"{email_plugin.ENVELOPE_ICON} 2 new emails", "Two"))
+        icon = email_plugin.ENVELOPE_ICON
+        self.assertEqual(self.rows(p), (f"{icon} 2 new emails", "Two"))
+        self.assertEqual(self.rows(p, after=5.1), (f"{icon} +1 new email", ""))
 
     def test_max_shown_0_shows_none(self):
         p = self.plugin(max_shown=0)
@@ -475,17 +511,17 @@ class EmailPlugin(unittest.TestCase):
             self.mail[u] = [f"S{u} <s@x.pt>", f"Mail {u}", False]
         self.poll(p)
         self.assertEqual(self.rows(p), (None, None))
-        self.assertEqual(p.total, 0)
+        self.assertEqual(p.left_out, 0)
 
     def test_a_renumbered_mailbox_drops_the_queue(self):
         p = self.plugin()
         self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
         self.poll(p)
-        self.assertEqual(self.rows(p)[1], "One")  # Two waits
+        self.assertEqual(self.rows(p)[1], "Two")  # One waits
         self.mail[4] = ["C <c@x.pt>", "Three", False]
         self.imap.validity = 8
         self.poll(p)
-        self.assertEqual(self.rows(p, after=5.1), (None, None))  # Two's UID means nothing now
+        self.assertEqual(self.rows(p, after=5.1), (None, None))  # One's UID means nothing now
         self.assertEqual(p.last, 4)  # from here on
 
     def test_folder_is_quoted_and_a_missing_one_says_so(self):
