@@ -8,6 +8,7 @@ WIDTH = 16
 TEXT_INTERVAL = 0.25  # seconds between LCD text updates
 # Both multiples of TEXT_INTERVAL: each step then comes after a whole number of updates
 SCROLL_STEP = 0.5     # seconds per character when a text doesn't fit (2 text updates)
+                      # by default: scroll() and fit() take another, also a multiple
 SCROLL_PAUSE = 2      # seconds still at each end
 
 # Each registered glyph stands for a character of Unicode's private use area in the
@@ -40,11 +41,11 @@ def ascii(text):
     return "".join(out)
 
 
-def scroll_time(text, width=WIDTH):
+def scroll_time(text, width=WIDTH, step=SCROLL_STEP):
     """Seconds scroll() takes to slide text once from start to end and back to the
     start: 0 when it fits."""
     extra = len(text) - width
-    return 2 * SCROLL_PAUSE + extra * SCROLL_STEP if extra > 0 else 0
+    return 2 * SCROLL_PAUSE + extra * step if extra > 0 else 0
 
 
 def next_update(now):
@@ -55,23 +56,23 @@ def next_update(now):
     return (now // TEXT_INTERVAL + 1) * TEXT_INTERVAL
 
 
-def scroll(text, width=WIDTH, since=0):
-    """The part of text to show now: slides left when it doesn't fit, pausing at
-    each end. With since (time.monotonic()), it starts from the beginning then.
-    Counts whole text updates (next_update()), so a step comes every
-    SCROLL_STEP / TEXT_INTERVAL updates, however late in its slot each one runs."""
+def scroll(text, width=WIDTH, since=0, step=SCROLL_STEP):
+    """The part of text to show now: slides left a character every step seconds when
+    it doesn't fit, pausing at each end. With since (time.monotonic()), it starts
+    from the beginning then. Counts whole text updates (next_update()), so a step
+    comes every step / TEXT_INTERVAL updates, however late in its slot each one runs."""
     extra = len(text) - width
     if extra <= 0:
         return text
     ticks = int(time.monotonic() // TEXT_INTERVAL) - int(since // TEXT_INTERVAL)
-    t = ticks * TEXT_INTERVAL % scroll_time(text, width)
-    shift = min(extra, max(0, int((t - SCROLL_PAUSE) / SCROLL_STEP)))
+    t = ticks * TEXT_INTERVAL % scroll_time(text, width, step)
+    shift = min(extra, max(0, int((t - SCROLL_PAUSE) / step)))
     return text[shift:shift + width]
 
 
-def fit(text, fixed=0, since=0):
+def fit(text, fixed=0, since=0, step=SCROLL_STEP):
     """A row: the first fixed characters stay still, the rest scrolls."""
-    return text[:fixed] + scroll(text[fixed:], WIDTH - fixed, since)
+    return text[:fixed] + scroll(text[fixed:], WIDTH - fixed, since, step)
 
 
 def _slot_char(slot):

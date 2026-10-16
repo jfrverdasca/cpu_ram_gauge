@@ -219,20 +219,21 @@ class Rows(unittest.TestCase):
     def test_scroll_steps_are_even(self):
         # Updates as the loop runs them: up to 60 ms late in their slot
         text = "".join(chr(65 + n % 26) for n in range(60))
-        jitter = random.Random(1)
-        now = since = 1000.13  # off the grid, as an email shown at ctx.now
-        shown, steps = None, []
-        while now < since + lcd.scroll_time(text) - 1:  # before it wraps to the start
-            with mock.patch.object(lcd.time, "monotonic", lambda: now):
-                row = lcd.scroll(text, since=since)
-            if row != shown and shown is not None:
-                steps.append(now)
-            shown = row
-            now = lcd.next_update(now) + jitter.uniform(0, 0.06)
-        gaps = [b - a for a, b in zip(steps, steps[1:])]
-        self.assertEqual(len(gaps), len(text) - lcd.WIDTH - 1)
-        for gap in gaps:
-            self.assertAlmostEqual(gap, lcd.SCROLL_STEP, delta=0.1)
+        for step in (lcd.SCROLL_STEP, lcd.TEXT_INTERVAL):  # the default, the fastest
+            jitter = random.Random(1)
+            now = since = 1000.13  # off the grid, as an email shown at ctx.now
+            shown, steps = None, []
+            while now < since + lcd.scroll_time(text, step=step) - 1:  # before it wraps
+                with mock.patch.object(lcd.time, "monotonic", lambda: now):
+                    row = lcd.scroll(text, since=since, step=step)
+                if row != shown and shown is not None:
+                    steps.append(now)
+                shown = row
+                now = lcd.next_update(now) + jitter.uniform(0, 0.06)
+            gaps = [b - a for a, b in zip(steps, steps[1:])]
+            self.assertEqual(len(gaps), len(text) - lcd.WIDTH - 1)
+            for gap in gaps:
+                self.assertAlmostEqual(gap, step, delta=0.1)
 
 
 class Glyphs(unittest.TestCase):
@@ -364,7 +365,7 @@ class EmailPlugin(unittest.TestCase):
         row = self.rows(p)[1]
         self.assertEqual(row, "a_very_long_addr")
         text = "a_very_long_address@example.com - Test"
-        seconds = lcd.scroll_time(text)
+        seconds = lcd.scroll_time(text, step=0.25)  # row 1 scrolls faster
         self.assertEqual(self.rows(p, after=seconds - 0.1)[0], None)
         self.assertIsNotNone(self.rows(p)[1])
         self.assertEqual(self.rows(p, after=0.2), (None, None))
@@ -508,6 +509,22 @@ class EmailPlugin(unittest.TestCase):
         self.poll(p)  # before "+1" ends
         icon = email_plugin.ENVELOPE_ICON
         self.assertEqual(self.rows(p, after=5.1), (f"{icon} 1 new email", "Three"))  # not 0
+
+    def test_renumbered_during_more_keeps_later_left_out_ones(self):
+        p = self.plugin(rows=("{icon} {count}", "{subject}"), max_shown=1)
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False],
+                          4: ["C <c@x.pt>", "Three", False]})
+        self.poll(p)
+        self.rows(p)
+        self.assertEqual(self.rows(p, after=5.1)[1], "")  # "+2"
+        self.imap.validity = 8
+        self.poll(p)
+        self.mail.update({5: ["D <d@x.pt>", "Four", False], 6: ["E <e@x.pt>", "Five", False]})
+        self.poll(p)  # before "+2" ends: Four left out
+        p.collect()
+        icon = email_plugin.ENVELOPE_ICON
+        self.assertEqual(self.rows(p, after=5.1), (f"{icon} 2 new emails", "Five"))
+        self.assertEqual(self.rows(p, after=5.1), (f"{icon} +1 new email", ""))
 
     def test_resume_keeps_the_count_and_the_rest(self):
         p = self.plugin(rows=("{icon} {count}", "{subject}"), max_shown=1)
