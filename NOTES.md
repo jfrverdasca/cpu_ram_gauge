@@ -498,10 +498,11 @@ Pomodoro, clicks, the `Needle: ...` notice and putting the rows together.
   count is the batch's (mail since the LCD had none, left-out ones included,
   read-elsewhere ones still counted) and only changes between messages; it
   replaces the `+N emails` summary. Since 2026-10-16 it counts down instead
-  (this message and those still to come, left-out ones included; read-elsewhere
-  ones drop out), newest first, and after the 3 newest `+N new emails` shows
-  the rest with row 1 blank (only on rows with just `{icon}`/`{count}`; not at
-  all without `{count}`). Mail coming meanwhile shows next. Or
+  (this message and those still to come, left-out ones included), newest
+  first, and after the 3 newest `+N new emails` shows the rest with row 1
+  blank (only on rows with `{count}` and just `{icon}` besides; not at all
+  without one). Queued ones read elsewhere drop out; left-out ones are only a
+  number, so they stay counted (keeping their UIDs would widen the search). Mail coming meanwhile shows next. Or
   `sender - subject` on row 1 only,
   leaving row 0 to CPU/RAM. What comes before
   the first field other than `{icon}` stays still. The account goes in
