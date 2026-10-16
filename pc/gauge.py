@@ -196,6 +196,15 @@ def load_env(path=ENV_FILE):
         os.environ.setdefault(key, value)
 
 
+def ease(elapsed):
+    """Share of the way to the new metric, elapsed seconds after a click: a
+    smoothstep, so the needle starts and stops smoothly."""
+    if SWITCH_SECONDS <= 0:
+        return 1
+    k = min(1, elapsed / SWITCH_SECONDS)
+    return k * k * (3 - 2 * k)
+
+
 def lcd_rows(plugins, ctx):
     """Each row from the first plugin with something for it; empty if none. Plugins
     after both rows are taken aren't asked, so what they'd show waits. Already in
@@ -329,9 +338,7 @@ def main():
 
                 if awake:
                     percent = needles[mode]()
-                    # Smoothstep: starts and stops smoothly, following the metric live
-                    k = min(1, (now - switch_at) / SWITCH_SECONDS)
-                    sent = switch_from + (percent - switch_from) * k * k * (3 - 2 * k)
+                    sent = switch_from + (percent - switch_from) * ease(now - switch_at)
                     s.write(f"N{sent:.1f}\n".encode())
                     if args.verbose:
                         print("  ".join(f"{name} {value():5.1f}%" for name, value in needles.items()))
