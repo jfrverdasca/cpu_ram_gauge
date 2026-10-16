@@ -57,6 +57,7 @@ PLUGINS = [
 ]
 BRIGHTNESS = 128      # LCD backlight, 1-255 (full while a plugin notifies)
 NOTICE = 3            # seconds "Needle: RAM" stays on row 0 after a click
+SWITCH_SECONDS = 1.5  # after a click, the needle eases to the new metric over this
 
 # Pomodoro, run by the Arduino (also without this script); saved there
 POMODORO_FOCUS = 25       # minutes, 1-99
@@ -229,6 +230,8 @@ def main():
     time.sleep(INTERVAL)  # psutil's first readings are always 0
 
     notice_until = 0      # "Needle: ..." on row 0 until then
+    sent = 0.0            # needle % as last sent
+    switch_from, switch_at = 0.0, -float("inf")  # after a click: the needle's start and when
     next_check = next_text = next_clock = 0
     due = dict.fromkeys(PLUGINS, 0)  # next update() of each plugin
     awake = True
@@ -271,6 +274,7 @@ def main():
                         restarted = True
                     elif line == b"CLICK" and awake:
                         mode = names[(names.index(mode) + 1) % len(names)]
+                        switch_from, switch_at = sent, now
                         notice_until = now + NOTICE
                         next_text = now  # the new text at once
                         if args.verbose:
@@ -298,6 +302,7 @@ def main():
                     glyphs.reset()  # the LCD lost them
                     next_check = next_text = 0
                     next_clock = now + CLOCK_INTERVAL
+                    switch_at = -float("inf")  # the needle homed: no switch to finish
 
                 if now >= next_check:
                     if display_on() != awake:
@@ -307,6 +312,7 @@ def main():
                         light = BRIGHTNESS if awake else 0
                         if awake:
                             resume(now)
+                            switch_at = -float("inf")  # the needle comes back from parked
                     elif not awake:
                         queue.append("B0\n")  # still asleep: the Arduino forgets B0 after 15 s
                     next_check = now + CHECK_INTERVAL
@@ -322,7 +328,11 @@ def main():
                             due[p] = now + p.interval
 
                 if awake:
-                    s.write(f"N{needles[mode]():.1f}\n".encode())
+                    percent = needles[mode]()
+                    # Smoothstep: starts and stops smoothly, following the metric live
+                    k = min(1, (now - switch_at) / SWITCH_SECONDS)
+                    sent = switch_from + (percent - switch_from) * k * k * (3 - 2 * k)
+                    s.write(f"N{sent:.1f}\n".encode())
                     if args.verbose:
                         print("  ".join(f"{name} {value():5.1f}%" for name, value in needles.items()))
                     if not pomodoro and now >= next_text:

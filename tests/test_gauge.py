@@ -523,12 +523,18 @@ class Main(unittest.TestCase):
         self.assertTrue(any(line.startswith("T1") for line in lines))
 
     def test_click_switches_the_needle_and_shows_it(self):
-        port = FakeSerial(events=[(0.5, b"CLICK\n")], duration=1.2)
-        run_main(port)
+        port = FakeSerial(events=[(0.5, b"CLICK\n")], duration=1.5)
+        run_main(port, SWITCH_SECONDS=0.6)
         lines = port.lines()
-        needles = [line for line in lines if line.startswith("N")]
-        self.assertEqual(needles[0], f"N{CPU:.1f}")
-        self.assertEqual(needles[-1], f"N{RAM:.1f}")
+        needles = [float(line[1:]) for line in lines if line.startswith("N")]
+        self.assertEqual(needles[0], CPU)
+        self.assertEqual(needles[-1], RAM)
+        # Smoothly, from CPU to RAM: small steps at the start and the end
+        moves = [b - a for a, b in zip(needles, needles[1:]) if b != a]
+        self.assertGreater(len(moves), 5)
+        self.assertTrue(all(m > 0 for m in moves))
+        self.assertLess(moves[0], max(moves) / 2)
+        self.assertLess(moves[-1], max(moves) / 2)
         self.assertIn("T0Needle: RAM", lines)
 
     def test_notice_goes_after_a_while(self):
