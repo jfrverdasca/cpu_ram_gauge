@@ -502,7 +502,10 @@ Pomodoro, clicks, the `Needle: ...` notice and putting the rows together.
   first, and after the 3 newest `+N new emails` shows the rest with row 1
   blank (only on rows with `{count}` and just `{icon}` besides; not at all
   without one). Queued ones read elsewhere drop out; left-out ones are only a
-  number, so they stay counted (keeping their UIDs would widen the search). Mail coming meanwhile shows next. Or
+  number, so they stay counted (keeping their UIDs would widen the search).
+  Mail coming meanwhile shows next. Row 1 (`sender - subject`) scrolls a
+  character every 0.25 s, twice as fast as other text (`steps`; 0.25 s, one
+  text update, is the fastest). Or
   `sender - subject` on row 1 only,
   leaving row 0 to CPU/RAM. What comes before
   the first field other than `{icon}` stays still. The account goes in

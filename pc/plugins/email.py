@@ -116,15 +116,19 @@ class Email(Plugin):
     max_shown: when more are new (after a Pomodoro, or the computer asleep), only the
     newest max_shown show; then more, with {n} the rest, on the rows with {count}
     and only {icon} besides (the others blank; not at all without such a row).
-    min_seconds: how long a message that fits stays.
+    min_seconds: how long a message that fits stays. steps: seconds per character
+    of each row's scrolling (multiples of lcd.TEXT_INTERVAL): row 1's subject goes
+    faster than other text.
     interval: seconds between polls (in a thread: the needle never waits)."""
 
     def __init__(self, rows=("{icon} {count}", "{sender} - {subject}"),
                  count=("{n} new email", "{n} new emails"),
                  more=("+{n} new email", "+{n} new emails"), max_shown=3, min_seconds=5,
-                 interval=60, icon=ENVELOPE_ICON, folder="INBOX"):
+                 steps=(lcd.SCROLL_STEP, 0.25), interval=60, icon=ENVELOPE_ICON,
+                 folder="INBOX"):
         self.templates, self.count, self.more = rows, count, more
         self.max_shown, self.min_seconds, self.interval = max_shown, min_seconds, interval
+        self.steps = steps
         self.icon, self.folder = icon, folder
         self.account = None
         self.last = self.validity = None
@@ -181,13 +185,19 @@ class Email(Plugin):
         # new: all of them, also those left out or whose headers didn't come
         last, validity, unread, messages, new = result
         if self.validity is not None and validity != self.validity:
-            self.left_out = 0  # renumbered: their UIDs mean nothing now
+            # Renumbered: the UIDs waiting mean nothing now. What's on the LCD stays
+            # until its time is up, but resume() won't bring it back nor its "+N" count
+            self.queue.clear()
+            self.left_out = 0
+            if self.showing:
+                self.showing = self.showing._replace(message=None, rest=0)
         self.last, self.validity = last, validity
         if unread is not None:  # those read elsewhere meanwhile go
             self.queue = deque(m for m in self.queue if m.uid in unread)
             s = self.showing
             if s and s.message and s.message.uid not in unread:
-                self.showing = s._replace(message=None)  # it ends, but resume() drops it
+                # It stays until its time is up, but resume() won't bring it back
+                self.showing = s._replace(message=None)
         if self.max_shown <= 0:
             return
         self.queue.extendleft(messages)  # oldest first in: the newest ends first
@@ -213,7 +223,7 @@ class Email(Plugin):
     def rows(self, ctx):
         self.collect()
         if self.showing and ctx.now >= self.showing.until:
-            self.left_out = max(0, self.left_out - self.showing.rest)  # renumbered meanwhile: 0
+            self.left_out -= self.showing.rest
             self.showing = None
         if not self.showing:
             fixed = [t and fixed_length(t, self.icon) for t in self.templates]
@@ -231,8 +241,10 @@ class Email(Plugin):
             else:
                 self.left_out = 0  # the batch is over
                 return None, None
-            seconds = max([self.min_seconds] + [lcd.scroll_time(r[f:], lcd.WIDTH - f)
-                                                for r, f in zip(rows, fixed) if r])
+            seconds = max([self.min_seconds] + [lcd.scroll_time(r[f:], lcd.WIDTH - f, step)
+                                                for r, f, step in zip(rows, fixed, self.steps)
+                                                if r])
             self.showing = Showing(m, rest, rows, fixed, ctx.now, ctx.now + seconds)
         s = self.showing
-        return tuple(r and lcd.fit(r, f, s.since) for r, f in zip(s.rows, s.fixed))
+        return tuple(r and lcd.fit(r, f, s.since, step)
+                     for r, f, step in zip(s.rows, s.fixed, self.steps))
