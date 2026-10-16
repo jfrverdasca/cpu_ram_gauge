@@ -1,5 +1,6 @@
-"""Incoming email, read over IMAP: each new unread message shows for as long as its
-longest row takes to scroll through once, with how many came in.
+"""Incoming email, read over IMAP: each new unread message shows, the newest first, for
+as long as its longest row takes to scroll through once, with how many are still to
+come.
 
 The account comes from .env (or the environment): EMAIL_HOST, EMAIL_USER and
 EMAIL_PASSWORD (for Gmail, an app password). Without them the plugin stays idle.
@@ -31,8 +32,8 @@ ENVELOPE_ICON = lcd.glyph([
     "....."])
 
 Message = namedtuple("Message", "uid sender address subject")
-# On the LCD: a Message
-Showing = namedtuple("Showing", "message rows fixed since until")
+# On the LCD: a Message, or None for "+N" (more: that N)
+Showing = namedtuple("Showing", "message more rows fixed since until")
 
 
 def fixed_length(template, icon):
@@ -45,6 +46,10 @@ def fixed_length(template, icon):
             return n
         n += len(icon)
     return n
+
+
+def fields(template):
+    return {field for _, field, _, _ in string.Formatter().parse(template) if field}
 
 
 def parse_headers(uid, raw):
@@ -102,24 +107,27 @@ class Email(Plugin):
     address), {address}, {subject}. What comes before the first field other than
     {icon} stays still; the rest scrolls. E.g. rows=("{icon} {count}", "{sender} -
     {subject}") or rows=(None, "{sender} - {subject}").
-    count: the text for one and for more, {n} the number. It's the batch's: the mail
-    that came in since the LCD had none, left-out ones included. Mail that comes
-    while the batch shows joins it: the number changes between messages, never
+    count: the text for one and for more, {n} the number: this message and those
+    still to come, left-out ones included, so it counts down. Mail that comes while
+    they show is shown next and counted: the number changes between messages, never
     during one.
     max_shown: when more are new (after a Pomodoro, or the computer asleep), only the
-    newest max_shown show. min_seconds: how long a message that fits stays.
+    newest max_shown show; then more, with {n} the rest, on the rows with only
+    {icon} and {count} (the others blank; none without {count}).
+    min_seconds: how long a message that fits stays.
     interval: seconds between polls (in a thread: the needle never waits)."""
 
     def __init__(self, rows=("{icon} {count}", "{sender} - {subject}"),
-                 count=("{n} new email", "{n} new emails"), max_shown=3, min_seconds=5,
+                 count=("{n} new email", "{n} new emails"),
+                 more=("+{n} new email", "+{n} new emails"), max_shown=3, min_seconds=5,
                  interval=60, icon=ENVELOPE_ICON, folder="INBOX"):
-        self.templates, self.count = rows, count
+        self.templates, self.count, self.more = rows, count, more
         self.max_shown, self.min_seconds, self.interval = max_shown, min_seconds, interval
         self.icon, self.folder = icon, folder
         self.account = None
         self.last = self.validity = None
-        self.queue = deque()  # Messages to show, oldest first
-        self.total = 0        # new ones in this batch, shown or not
+        self.queue = deque()  # Messages to show, newest first
+        self.left_out = 0     # new ones not in the queue: past max_shown, or no headers
         self.showing = None   # a Showing
         self.future = self.error = None  # future: the poll running or not taken in yet
 
@@ -136,7 +144,7 @@ class Email(Plugin):
         self.collect()
         if self.future:  # still polling
             return
-        first = self.queue[0].uid if self.queue else float("inf")
+        first = self.queue[-1].uid if self.queue else float("inf")
         args = (*self.account, self.folder, self.last, self.validity, first, self.max_shown)
         self.future = Future()
         # Not a ThreadPoolExecutor: its threads aren't daemons, and Ctrl+C would wait
@@ -170,14 +178,19 @@ class Email(Plugin):
         self.last, self.validity, unread, messages, new = result
         if unread is not None:  # those read elsewhere meanwhile go
             self.queue = deque(m for m in self.queue if m.uid in unread)
-        self.queue.extend(messages)
-        self.total += new
+            if not unread:  # renumbered: the left-out ones too
+                self.left_out = 0
+        if self.max_shown <= 0:
+            return
+        self.queue.extendleft(messages)  # oldest first in: the newest ends first
+        self.left_out += new - len(messages)
         while len(self.queue) > self.max_shown:
-            self.queue.popleft()
+            self.queue.pop()
+            self.left_out += 1
 
     def resume(self):
         # The Pomodoro or the sleep cut it short: shown again from the start
-        if self.showing:
+        if self.showing and self.showing.message:  # "+N" shows again by itself
             self.queue.appendleft(self.showing.message)
         self.showing = None
 
@@ -187,19 +200,27 @@ class Email(Plugin):
     def rows(self, ctx):
         self.collect()
         if self.showing and ctx.now >= self.showing.until:
+            self.left_out -= self.showing.more
             self.showing = None
         if not self.showing:
-            if not self.queue:
-                self.total = 0  # the batch is over
-                return None, None
-            m = self.queue.popleft()
-            count = self.count[self.total != 1].format(n=self.total)
-            fields = dict(icon=self.icon, count=count, sender=m.sender, address=m.address,
-                          subject=m.subject)
-            rows = [t and t.format(**fields) for t in self.templates]
             fixed = [t and fixed_length(t, self.icon) for t in self.templates]
+            if self.queue:
+                m, more = self.queue.popleft(), 0
+                n = 1 + len(self.queue) + self.left_out
+                values = dict(icon=self.icon, count=self.count[n != 1].format(n=n),
+                              sender=m.sender, address=m.address, subject=m.subject)
+                rows = [t and t.format(**values) for t in self.templates]
+            elif self.left_out > 0 and any(t and "count" in fields(t) for t in self.templates):
+                m, more = None, self.left_out
+                count = self.more[more != 1].format(n=more)
+                rows = [t and (t.format(icon=self.icon, count=count)
+                               if fields(t) <= {"icon", "count"} else "")
+                        for t in self.templates]
+            else:
+                self.left_out = 0  # the batch is over
+                return None, None
             seconds = max([self.min_seconds] + [lcd.scroll_time(r[f:], lcd.WIDTH - f)
                                                 for r, f in zip(rows, fixed) if r])
-            self.showing = Showing(m, rows, fixed, ctx.now, ctx.now + seconds)
+            self.showing = Showing(m, more, rows, fixed, ctx.now, ctx.now + seconds)
         s = self.showing
         return tuple(r and lcd.fit(r, f, s.since) for r, f in zip(s.rows, s.fixed))

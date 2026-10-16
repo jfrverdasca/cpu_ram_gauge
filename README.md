@@ -100,9 +100,9 @@ Email(rows=(None, "{sender} - {subject}"))              # row 1 only; row 0 keep
 ```
 
 It checks every minute and never marks anything as read. New mail shows one at a
-time, for 5 s or until its row has scrolled through. `{count}` is how many came in
-this batch, the same while they show. After a Pomodoro or the computer sleeping,
-only the 3 newest show; the count includes the rest.
+time, the newest first, for 5 s or until its row has scrolled through. `{count}` is
+how many are still to come, so it counts down. After a Pomodoro or the computer
+sleeping, only the 3 newest show, then `+4 new emails` for the rest.
 
 ### Plugins
 
