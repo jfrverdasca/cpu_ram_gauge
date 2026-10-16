@@ -104,6 +104,18 @@ def run_main(port, display_on=True, scans=None, plugins=None, **patches):
 
 
 class Helpers(unittest.TestCase):
+    def test_ease_starts_and_stops_smoothly(self):
+        steps = [gauge.ease(t + 0.05) - gauge.ease(t) for t in (0, 0.5, 0.75, 1.0, 1.45)]
+        self.assertEqual((gauge.ease(0), gauge.ease(1.5), gauge.ease(9)), (0, 1, 1))
+        self.assertLess(steps[0], steps[2] / 10)   # slow at the start
+        self.assertLess(steps[-1], steps[2] / 10)  # and at the end
+        self.assertGreater(steps[1], steps[0])
+        self.assertGreater(steps[3], steps[4])
+
+    def test_ease_off(self):
+        with mock.patch.object(gauge, "SWITCH_SECONDS", 0):
+            self.assertEqual(gauge.ease(0), 1)
+
     def test_read_lines_keeps_a_partial_line(self):
         port = FakeSerial(events=[(0, b"CLI")])
         lines, rest = gauge.read_lines(port, b"")
@@ -529,13 +541,18 @@ class Main(unittest.TestCase):
         needles = [float(line[1:]) for line in lines if line.startswith("N")]
         self.assertEqual(needles[0], CPU)
         self.assertEqual(needles[-1], RAM)
-        # Smoothly, from CPU to RAM: small steps at the start and the end
+        # In steps, from CPU to RAM (their shape: test_ease_starts_and_stops_smoothly)
         moves = [b - a for a, b in zip(needles, needles[1:]) if b != a]
-        self.assertGreater(len(moves), 5)
+        self.assertGreater(len(moves), 3)
         self.assertTrue(all(m > 0 for m in moves))
-        self.assertLess(moves[0], max(moves) / 2)
-        self.assertLess(moves[-1], max(moves) / 2)
         self.assertIn("T0Needle: RAM", lines)
+
+    def test_restart_ends_a_switch(self):
+        # The needle homed: the new metric at once, no ease from where it was
+        port = FakeSerial(events=[(0.5, b"CLICK\n"), (0.6, b"READY 2\n")], duration=1.0)
+        run_main(port, SWITCH_SECONDS=10)
+        needles = [float(line[1:]) for line in port.lines() if line.startswith("N")]
+        self.assertEqual(needles[-1], RAM)
 
     def test_notice_goes_after_a_while(self):
         port = FakeSerial(events=[(0.2, b"CLICK\n")], duration=1.2)
