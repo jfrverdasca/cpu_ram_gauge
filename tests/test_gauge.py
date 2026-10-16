@@ -442,6 +442,73 @@ class EmailPlugin(unittest.TestCase):
         self.assertEqual(self.rows(p, after=600)[1], "One")
         self.assertEqual(self.rows(p, after=4.9)[1], "One")
 
+    def test_resume_puts_it_back_in_order(self):
+        p = self.plugin()
+        self.mail[2] = ["A <a@x.pt>", "One", False]
+        self.poll(p)
+        self.rows(p)
+        self.mail[3] = ["B <b@x.pt>", "Two", False]
+        self.poll(p)  # comes while One shows
+        p.resume()
+        self.poll(p)  # searches from One: still waiting
+        shown = [self.rows(p, after=5.1)[1] for _ in range(3)]
+        self.assertEqual(shown, ["Two", "One", None])
+
+    def test_reading_the_shown_one_keeps_the_rest(self):
+        p = self.plugin(rows=("{icon} {count}", "{subject}"), max_shown=1)
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
+        self.poll(p)
+        self.assertEqual(self.rows(p)[1], "Two")
+        self.mail[3][2] = True  # Two read on the phone while it shows
+        self.poll(p)
+        p.collect()  # taken in, no poll left running
+        self.assertEqual(self.rows(p, after=5.1), (f"{email_plugin.ENVELOPE_ICON} +1 new email", ""))
+
+    def test_one_read_while_cut_short_doesnt_come_back(self):
+        p = self.plugin()
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
+        self.poll(p)
+        self.assertEqual(self.rows(p)[1], "Two")
+        self.mail[3][2] = True  # read on the phone while it shows
+        self.poll(p)
+        p.collect()  # taken in, no poll left running
+        p.resume()  # then a Pomodoro
+        self.assertEqual(self.rows(p, after=600)[1], "One")
+        self.assertEqual(self.rows(p, after=5.1), (None, None))
+
+    def test_resume_keeps_max_shown(self):
+        p = self.plugin(rows=("{icon} {count}", "{subject}"), max_shown=1)
+        self.mail[2] = ["A <a@x.pt>", "One", False]
+        self.poll(p)
+        self.rows(p)
+        self.mail[3] = ["B <b@x.pt>", "Two", False]
+        self.poll(p)
+        p.collect()  # taken in, no poll left running: Two waits
+        p.resume()  # One back: past max_shown, it goes to "+1"
+        icon = email_plugin.ENVELOPE_ICON
+        self.assertEqual(self.rows(p, after=600), (f"{icon} 2 new emails", "Two"))
+        self.assertEqual(self.rows(p, after=5.1), (f"{icon} +1 new email", ""))
+
+    def test_no_more_when_count_shares_its_row(self):
+        p = self.plugin(rows=("{icon} {count}: {subject}", None), max_shown=1)
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
+        self.poll(p)
+        self.assertTrue(self.rows(p)[0].startswith(f"{email_plugin.ENVELOPE_ICON} 2 new emails"))
+        self.assertEqual(self.rows(p, after=30), (None, None))  # no blank row instead
+
+    def test_renumbered_during_more_counts_no_less_than_0(self):
+        p = self.plugin(rows=("{icon} {count}", "{subject}"), max_shown=1)
+        self.mail.update({2: ["A <a@x.pt>", "One", False], 3: ["B <b@x.pt>", "Two", False]})
+        self.poll(p)
+        self.rows(p)
+        self.assertEqual(self.rows(p, after=5.1)[1], "")  # "+1"
+        self.imap.validity = 8
+        self.poll(p)
+        self.mail[4] = ["C <c@x.pt>", "Three", False]
+        self.poll(p)  # before "+1" ends
+        icon = email_plugin.ENVELOPE_ICON
+        self.assertEqual(self.rows(p, after=5.1), (f"{icon} 1 new email", "Three"))  # not 0
+
     def test_resume_keeps_the_count_and_the_rest(self):
         p = self.plugin(rows=("{icon} {count}", "{subject}"), max_shown=1)
         icon = email_plugin.ENVELOPE_ICON
